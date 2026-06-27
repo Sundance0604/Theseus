@@ -1,0 +1,41 @@
+/* ============================================================
+   忒修斯之船 (Ship of Theseus) — 全局样式重置
+   顶天立地，无边无际 —— 不留任何模板残留
+   ============================================================ */
+
+/* ---- 盒模型统一 + 清空默认内外边距 ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- 根层铺满视口，无边框无边距，纯黑底 ---- */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1A1A1A;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- 禁止文本选中（保持游戏沉浸感） ---- */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---- 流式打字光标闪烁动画 ---- */
+.cursor-blink {
+  animation: cursorBlink 0.8s infinite;
+  color: #FFD700;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
