@@ -8,6 +8,16 @@ import * as PIXI from 'pixi.js';
 export const ShipCanvas = ({ phase, onShipReady }) => {
   const canvasRef = useRef(null);
   const appRef = useRef(null);
+  const phaseRef = useRef(phase);
+  const onShipReadyRef = useRef(onShipReady);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  useEffect(() => {
+    onShipReadyRef.current = onShipReady;
+  }, [onShipReady]);
 
   useEffect(() => {
     let destroyed = false;
@@ -64,7 +74,7 @@ export const ShipCanvas = ({ phase, onShipReady }) => {
       // 4. 静态空热区 (暂不实现点击逻辑，仅为兼容父组件)
       // ================================================================
       const dummyZones = {};
-      if (onShipReady) onShipReady(dummyZones);
+      onShipReadyRef.current?.(dummyZones);
 
       // ================================================================
       // 5. 主循环：仅旋转方形背景
@@ -76,10 +86,10 @@ export const ShipCanvas = ({ phase, onShipReady }) => {
         // 虚空舰不动 — rotation 始终为 0
 
         // phase 缩放动画
-        if (phase === 'zooming') {
+        if (phaseRef.current === 'zooming') {
           const target = shipBaseScale * 1.8;
           ship.scale.set(ship.scale.x + (target - ship.scale.x) * 0.03);
-        } else if (phase === 'idle') {
+        } else if (phaseRef.current === 'idle') {
           ship.scale.set(ship.scale.x + (shipBaseScale - ship.scale.x) * 0.02);
         }
       });
@@ -87,9 +97,9 @@ export const ShipCanvas = ({ phase, onShipReady }) => {
 
     return () => {
       destroyed = true;
-      try { app.destroy(true, { children: true, texture: true }); } catch (_) {}
+      try { app.destroy(true, { children: true }); } catch {}
     };
-  }, [phase]);
+  }, []);
 
   return (
     <div

@@ -13,7 +13,10 @@ const ZONE_DEFS = {
   memoryWard: { id: 'memoryWard', label: 'MEMORY WARD',        sub: 'Isolated memory',     color: '#FFD700' },
 };
 
-export const ShipPanorama = ({ onNavigateToDialogue }) => {
+export const ShipPanorama = ({
+  personas,
+  onNavigateToDialogue,
+}) => {
   const [phase, setPhase] = useState('idle');
   const [enteredZone, setEnteredZone] = useState(null);
 
@@ -56,6 +59,7 @@ export const ShipPanorama = ({ onNavigateToDialogue }) => {
       {enteredZone && (
         <ZoneScene
           zone={enteredZone}
+          personas={personas}
           onBack={handleBackFromZone}
           onEnterDialogue={handleEnterDialogue}
         />

@@ -1,5 +1,4 @@
 import React from 'react';
-import { PERSONAS } from '../../config/personas';
 
 /* ==========================================================================
    ZoneScene — P5R 波普朋克红底白框子场景
@@ -11,7 +10,7 @@ const PAPER = '#F5F0EB';
 const BLACK = '#1A1A1A';
 const FONT = '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif';
 
-export const ZoneScene = ({ zone, onBack, onEnterDialogue }) => {
+export const ZoneScene = ({ zone, personas, onBack, onEnterDialogue }) => {
   if (!zone) return null;
 
   return (
@@ -61,7 +60,7 @@ export const ZoneScene = ({ zone, onBack, onEnterDialogue }) => {
           <div style={{ width: '100%', height: '3px', backgroundColor: PAPER, marginBottom: '24px', boxShadow: `3px 3px 0px ${BLACK}` }} />
 
           {/* ---- 区域内容 ---- */}
-          {renderZoneContent(zone, onEnterDialogue)}
+          {renderZoneContent(zone, personas, onEnterDialogue)}
         </div>
       </div>
 
@@ -70,9 +69,9 @@ export const ZoneScene = ({ zone, onBack, onEnterDialogue }) => {
   );
 };
 
-function renderZoneContent(zone, onEnterDialogue) {
+function renderZoneContent(zone, personas, onEnterDialogue) {
   switch (zone.id) {
-    case 'crew':       return <CrewQuartersContent onEnterDialogue={onEnterDialogue} />;
+    case 'crew':       return <CrewQuartersContent personas={personas} onEnterDialogue={onEnterDialogue} />;
     case 'warRoom':    return <InfoPlaceholder label="WAR ROOM" desc="Multi-character seminar — coming soon." />;
     case 'captain':    return <InfoPlaceholder label="CAPTAIN'S CABIN" desc="Personal dashboard — coming soon." />;
     case 'engine':     return <InfoPlaceholder label="ENGINE ROOM" desc="System status — coming soon." />;
@@ -93,49 +92,69 @@ function InfoPlaceholder({ label, desc }) {
 }
 
 /* ---- 船员室：选择船员 ---- */
-function CrewQuartersContent({ onEnterDialogue }) {
-  const crewIds = ['cindy', 'noodles', 'valse', 'orc', 'pavane', 'sofies', 'socrates', 'lin'];
+function CrewQuartersContent({ personas = [], onEnterDialogue }) {
   return (
     <div>
       <p style={{ fontFamily: FONT, fontStyle: 'italic', fontSize: '14px', color: PAPER, opacity: 0.85, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '20px' }}>
         SELECT A CREW MEMBER FOR 1-ON-1 DIALOGUE
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
-        {crewIds.map(id => {
-          const p = PERSONAS[id];
-          if (!p) return null;
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '14px', justifyContent: 'center' }}>
+        {personas.map(p => {
           return (
             <button
-              key={id}
-              onClick={() => onEnterDialogue(id)}
+              key={p.id}
+              onClick={() => onEnterDialogue(p.id)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '14px',
-                padding: '16px 18px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+                padding: '16px 10px 12px',
                 backgroundColor: BLACK,
-                border: `2px solid ${p.color}`,
-                cursor: 'pointer', textAlign: 'left',
+                border: `2px solid ${p.color || PAPER}`,
+                cursor: 'pointer',
                 transform: 'skewX(-5deg)',
                 boxShadow: `5px 5px 0px ${BLACK}`,
-                transition: 'transform 0.15s ease, background-color 0.12s',
+                transition: 'transform 0.15s ease, background-color 0.12s, border-color 0.12s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'skewX(-5deg) scale(1.03)'; e.currentTarget.style.backgroundColor = '#0D0D0D'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'skewX(-5deg) scale(1)'; e.currentTarget.style.backgroundColor = BLACK; }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'skewX(-5deg) scale(1.05)';
+                e.currentTarget.style.backgroundColor = '#0D0D0D';
+                e.currentTarget.style.borderColor = PAPER;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'skewX(-5deg) scale(1)';
+                e.currentTarget.style.backgroundColor = BLACK;
+                e.currentTarget.style.borderColor = p.color || PAPER;
+              }}
             >
+              {/* 头像 */}
               <div style={{
-                width: '48px', height: '48px', flexShrink: 0,
-                backgroundColor: p.color,
+                width: '72px', height: '72px', flexShrink: 0,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: `2px solid ${p.color || PAPER}`,
+                backgroundColor: '#1A1A1A',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '24px', border: `2px solid ${PAPER}`,
-              }}>{p.emoji}</div>
-              <div style={{ transform: 'skewX(5deg)', minWidth: 0 }}>
-                <div style={{
-                  fontFamily: FONT, fontStyle: 'italic', fontWeight: '900',
-                  fontSize: '16px', color: p.color, textTransform: 'uppercase', letterSpacing: '0px',
-                }}>{p.name}</div>
-                <div style={{
-                  fontFamily: FONT, fontStyle: 'italic',
-                  fontSize: '9px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px',
-                }}>{p.domain} — {p.tagline}</div>
+                transform: 'skewX(5deg)',
+              }}>
+                {p.avatarUrl ? (
+                  <img
+                    src={p.avatarUrl}
+                    alt={p.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '28px' }}>{p.emoji || '◆'}</span>
+                )}
+              </div>
+
+              {/* 名字（头像底部） */}
+              <div style={{
+                transform: 'skewX(5deg)',
+                fontFamily: FONT, fontStyle: 'italic', fontWeight: '900',
+                fontSize: '15px', color: p.color || PAPER,
+                textTransform: 'uppercase', letterSpacing: '0px',
+                textAlign: 'center',
+              }}>
+                {p.name}
               </div>
             </button>
           );

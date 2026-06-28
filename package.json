@@ -1,10 +1,11 @@
 {
-  "name": "my-p5r-game",
+  "name": "ship-of-theseus",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "local-ai": "node bridge-server/server.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"

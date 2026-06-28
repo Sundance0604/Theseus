@@ -7,14 +7,58 @@
  * 前端不需要任何 API Key，所有 AI 能力由本地 Claude Code 处理。
  */
 
-/** 桥接服务器地址 */
-const BRIDGE_URL = 'http://localhost:3099';
+/** 本地 AI 服务地址。可在 .env.local 中用 VITE_LOCAL_AI_URL 覆盖。 */
+const BRIDGE_URL = import.meta.env.VITE_LOCAL_AI_URL || 'http://127.0.0.1:3099';
+
+async function readErrorResponse(response) {
+  try {
+    const body = await response.json();
+    return body.error || JSON.stringify(body);
+  } catch {
+    return response.text();
+  }
+}
+
+export async function getLocalPersonas() {
+  const response = await fetch(`${BRIDGE_URL}/personas`);
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  const body = await response.json();
+  return (body.personas || []).map((persona) => ({
+    ...persona,
+    avatarUrl: persona.hasAvatar
+      ? `${BRIDGE_URL}/persona-asset?personaId=${encodeURIComponent(persona.id)}`
+      : '',
+  }));
+}
+
+export async function getLocalHistory(personaId) {
+  const response = await fetch(
+    `${BRIDGE_URL}/history?personaId=${encodeURIComponent(personaId)}`,
+  );
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
+}
+
+export async function clearLocalHistory(personaId) {
+  const response = await fetch(
+    `${BRIDGE_URL}/history?personaId=${encodeURIComponent(personaId)}`,
+    { method: 'DELETE' },
+  );
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
+}
 
 /**
  * 向 Claude 发送消息并流式接收回复
  *
  * @param {Object} options
- * @param {string} options.personaId - 角色 ID（如 'valse', 'noodles'），可选
+ * @param {string} options.personaId - 本地角色 ID
  * @param {string} options.message - 用户发送的消息文本
  * @param {(chunkText: string) => void} options.onChunk - 每收到一个文本块时回调
  * @param {(fullText: string) => void} options.onDone - 流结束时回调
@@ -54,13 +98,8 @@ export async function streamClaude({
     });
 
     if (!response.ok) {
-      let errorBody;
-      try {
-        errorBody = await response.text();
-      } catch {
-        errorBody = `HTTP ${response.status}`;
-      }
-      throw new Error(`桥接服务器返回错误 (${response.status}): ${errorBody}`);
+      const errorBody = await readErrorResponse(response);
+      throw new Error(`本地 AI 服务返回错误 (${response.status}): ${errorBody}`);
     }
 
     // 读取 SSE 流
@@ -151,8 +190,7 @@ export async function streamClaude({
 
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
       onError(new Error(
-        '无法连接到桥接服务器 (localhost:3099)。\n' +
-        '请先在终端运行: node bridge-server/server.js'
+        '本地 AI 运行层尚未就绪。请确认 npm run dev 正在运行，然后重试。'
       ));
     } else {
       onError(error);
@@ -170,8 +208,9 @@ export async function checkBridgeHealth() {
       method: 'GET',
       signal: AbortSignal.timeout(3000),
     });
-    return response.ok;
+    if (!response.ok) return null;
+    return response.json();
   } catch {
-    return false;
+    return null;
   }
 }

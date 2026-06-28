@@ -3,7 +3,6 @@ import { useChatManager } from './hooks/useChatManager';
 import { GameBackground } from './components/GameBackground';
 import { AiDialogueStream } from './components/AiDialogueStream';
 import { UserInputPanel } from './components/UserInputPanel';
-import { SettingsPanel } from './components/SettingsPanel';
 import { ShipPanorama } from './scenes/ShipPanorama';
 import { COLORS } from './config/constants';
 
@@ -11,29 +10,22 @@ function App() {
   const {
     chatHistory,
     partReplacement,
+    personas,
+    activePersona,
     isStreaming,
+    isLoadingHistory,
+    localService,
     error,
-    apiKey,
     sendMessage,
-    setApiKey,
     setActivePersonaId,
     cancelStreaming,
     clearHistory,
     clearError,
+    refreshLocalService,
   } = useChatManager();
 
   // scene: 'launch' | 'dialogue'
   const [scene, setScene] = useState('launch');
-  const [showSettings, setShowSettings] = useState(!apiKey);
-
-  const handleOpenSettings = () => setShowSettings(true);
-  const handleCloseSettings = () => {
-    if (apiKey) setShowSettings(false);
-  };
-  const handleSaveApiKey = (key) => {
-    setApiKey(key);
-    clearError();
-  };
 
   // 从启动画面进入对话
   const handleNavigateToDialogue = (personaId) => {
@@ -59,14 +51,20 @@ function App() {
 
       {/* ============ 场景1: 船全景启动画面 ============ */}
       {scene === 'launch' && (
-        <ShipPanorama onNavigateToDialogue={handleNavigateToDialogue} />
+        <ShipPanorama
+          personas={personas}
+          onNavigateToDialogue={handleNavigateToDialogue}
+        />
       )}
 
       {/* ============ 场景2: 对话界面 ============ */}
       {scene === 'dialogue' && (
         <>
           {/* Pixi.js 动态斜角背景层 */}
-          <GameBackground partReplacement={partReplacement} />
+          <GameBackground
+            partReplacement={partReplacement}
+            activeColor={activePersona?.color}
+          />
 
           {/* 顶部工具栏 */}
           <div style={{
@@ -109,18 +107,20 @@ function App() {
                 REPLACED {partReplacement}%
               </span>
 
-              {/* API 连接状态灯 */}
+              {/* 本地 AI 服务状态灯 */}
               <span style={{
                 display: 'inline-block',
                 width: '7px',
                 height: '7px',
                 borderRadius: '50%',
-                backgroundColor: apiKey
+                backgroundColor: localService
                   ? (isStreaming ? '#FFD700' : '#00E676')
                   : '#FF1744',
                 boxShadow: `0 0 6px currentColor`,
               }}
-                title={apiKey ? (isStreaming ? '通信中...' : 'API 就绪') : '未配置 API Key'}
+                title={localService
+                  ? (isStreaming ? 'Claude Code 通信中...' : '本地 AI 服务就绪')
+                  : '本地 AI 服务未连接'}
               />
 
               {/* 返回甲板 */}
@@ -151,19 +151,6 @@ function App() {
                 RESET
               </button>
 
-              {/* 设置入口 */}
-              <button onClick={handleOpenSettings} style={{
-                background: 'none',
-                border: '1px solid #555',
-                color: '#999',
-                padding: '3px 10px',
-                fontFamily: 'monospace',
-                fontSize: '10px',
-                cursor: 'pointer',
-                letterSpacing: '1px',
-              }}>
-                CFG
-              </button>
             </div>
           </div>
 
@@ -189,7 +176,7 @@ function App() {
               <span style={{ letterSpacing: '1px' }}>!! {error}</span>
               <button onClick={() => {
                 clearError();
-                if (!apiKey) setShowSettings(true);
+                refreshLocalService();
               }} style={{
                 background: COLORS.WHITE,
                 color: COLORS.BLACK,
@@ -200,7 +187,7 @@ function App() {
                 cursor: 'pointer',
                 fontWeight: 'bold',
               }}>
-                {apiKey ? 'DISMISS' : 'SET KEY'}
+                RETRY
               </button>
             </div>
           )}
@@ -244,7 +231,7 @@ function App() {
             </div>
           )}
 
-          {/* 中央对话视窗 */}
+          {/* 中央对话视窗 — 左右无边距，全宽沉浸 */}
           <div style={{
             position: 'absolute',
             top: '55px',
@@ -254,26 +241,20 @@ function App() {
             zIndex: 2,
             display: 'flex',
             flexDirection: 'column',
+            minWidth: '0',
           }}>
             <AiDialogueStream
               chatHistory={chatHistory}
               isStreaming={isStreaming}
+              activePersona={activePersona}
             />
             <UserInputPanel
-              isStreaming={isStreaming}
+              isStreaming={isStreaming || isLoadingHistory}
               onSendMessage={sendMessage}
             />
           </div>
         </>
       )}
-
-      {/* ============ 设置面板 (共享) ============ */}
-      <SettingsPanel
-        apiKey={apiKey}
-        onSaveApiKey={handleSaveApiKey}
-        onClose={handleCloseSettings}
-        isVisible={showSettings}
-      />
 
       {/* ============ 全局关键帧动画 ============ */}
       <style>{`
