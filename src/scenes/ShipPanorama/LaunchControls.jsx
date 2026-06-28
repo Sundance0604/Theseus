@@ -41,16 +41,16 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
   return (
     <div style={{
       position: 'absolute',
-      left: isLaunched ? '20px' : '30px',
+      left: isLaunched ? '24px' : '36px',
       top: '50%',
       transform: 'translateY(-50%)',
       zIndex: 20,
       display: 'flex',
       flexDirection: 'column',
-      gap: isLaunched ? '0px' : '18px',
+      gap: isLaunched ? '1px' : '22px',
       alignItems: 'flex-start',
       transition: 'all 0.5s ease',
-      width: isLaunched ? '230px' : 'auto',
+      width: isLaunched ? '280px' : 'auto',
     }}>
       {/* ======== 标题区 (仅 idle/zooming) ======== */}
       {!isLaunched && (
@@ -58,17 +58,17 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
           <h2 style={{
             margin: 0, color: PAPER,
             fontFamily: FONT, fontStyle: 'italic',
-            fontSize: '42px', fontWeight: '900',
+            fontSize: '56px', fontWeight: '900',
             letterSpacing: '-1px', textTransform: 'uppercase',
-            textShadow: `6px 6px 0px ${ANARCHY}`,
+            textShadow: `8px 8px 0px ${ANARCHY}`,
             lineHeight: 1.0,
           }}>SHIP OF</h2>
           <h2 style={{
             margin: 0, color: ANARCHY,
             fontFamily: FONT, fontStyle: 'italic',
-            fontSize: '42px', fontWeight: '900',
+            fontSize: '56px', fontWeight: '900',
             letterSpacing: '-1px', textTransform: 'uppercase',
-            textShadow: `6px 6px 0px ${BLACK}`,
+            textShadow: `8px 8px 0px ${BLACK}`,
             lineHeight: 1.0, marginTop: '-4px',
           }}>THESEUS</h2>
         </div>
@@ -80,13 +80,13 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
           position: 'relative', marginBottom: '6px',
           backgroundColor: BLACK, border: `3px solid ${ANARCHY}`,
           transform: 'skewX(-12deg)',
-          padding: '6px 20px', alignSelf: 'flex-start',
-          boxShadow: `6px 6px 0px ${BLACK}`,
+          padding: '8px 24px', alignSelf: 'flex-start',
+          boxShadow: `8px 8px 0px ${BLACK}`,
         }}>
           <span style={{
             display: 'inline-block', transform: 'skewX(12deg)',
             fontFamily: FONT, fontStyle: 'italic',
-            fontSize: '14px', fontWeight: '900',
+            fontSize: '18px', fontWeight: '900',
             color: PAPER, letterSpacing: '-0.5px', textTransform: 'uppercase',
           }}>NAVIGATION</span>
         </div>
@@ -94,13 +94,13 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
 
       {/* ======== 分割线 ======== */}
       {!isLaunched && (
-        <div style={{ width: '100%', height: '4px', backgroundColor: ANARCHY, margin: '4px 0', boxShadow: `3px 3px 0px ${BLACK}` }} />
+        <div style={{ width: '100%', height: '5px', backgroundColor: ANARCHY, margin: '6px 0', boxShadow: `4px 4px 0px ${BLACK}` }} />
       )}
 
       {/* ======== 状态文字 ======== */}
       <div style={{
         fontFamily: FONT, fontStyle: 'italic',
-        fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase',
+        fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase',
         color: isLaunched ? '#00E676' : (isZooming ? '#FFD700' : '#888'),
         marginBottom: isLaunched ? '4px' : '0',
       }}>
@@ -115,16 +115,16 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
           onClick={onLaunch} disabled={!isIdle}
           className="p5r-launch-btn"
           style={{
-            padding: '20px 44px',
+            padding: '26px 56px',
             fontFamily: FONT, fontStyle: 'italic',
-            fontSize: '20px', fontWeight: '900',
+            fontSize: '26px', fontWeight: '900',
             letterSpacing: '-1px', textTransform: 'uppercase',
             color: isIdle ? PAPER : '#555',
             backgroundColor: isIdle ? ANARCHY : '#222',
-            border: `3px solid ${isIdle ? PAPER : '#444'}`, outline: 'none',
+            border: `4px solid ${isIdle ? PAPER : '#444'}`, outline: 'none',
             cursor: isIdle ? 'pointer' : 'not-allowed',
             transform: 'skewX(-10deg)',
-            boxShadow: isIdle ? `10px 10px 0px ${BLACK}` : 'none',
+            boxShadow: isIdle ? `14px 14px 0px ${BLACK}` : 'none',
             transition: 'transform 0.18s cubic-bezier(0.25, 1.5, 0.5, 1), background-color 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s',
             whiteSpace: 'nowrap',
           }}
@@ -134,7 +134,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
             el.style.backgroundColor = BLACK;
             el.style.color = ANARCHY;
             el.style.borderColor = ANARCHY;
-            el.style.boxShadow = `12px 12px 0px ${ANARCHY}`;
+            el.style.boxShadow = `16px 16px 0px ${ANARCHY}`;
             el.style.animation = 'p5r-shake 0.15s infinite linear';
           }}
           onMouseLeave={(e) => {
@@ -143,7 +143,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
             el.style.backgroundColor = ANARCHY;
             el.style.color = PAPER;
             el.style.borderColor = PAPER;
-            el.style.boxShadow = `10px 10px 0px ${BLACK}`;
+            el.style.boxShadow = `14px 14px 0px ${BLACK}`;
             el.style.animation = '';
           }}
         >
@@ -163,13 +163,13 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
               className="p5r-nav-btn"
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
-                width: '100%', padding: '10px 14px',
+                width: '100%', padding: '14px 18px',
                 backgroundColor: BLACK,
-                border: `2px solid ${PAPER}`, borderLeft: `5px solid ${PAPER}`,
+                border: `2px solid ${PAPER}`, borderLeft: `6px solid ${PAPER}`,
                 outline: 'none', cursor: 'pointer', textAlign: 'left',
                 transform: 'skewX(-10deg)',
                 transition: 'transform 0.18s cubic-bezier(0.25, 1.5, 0.5, 1), background-color 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s',
-                boxShadow: `5px 5px 0px ${BLACK}`,
+                boxShadow: `6px 6px 0px ${BLACK}`,
                 animation: `navFadeIn 0.25s ${i * 0.05}s ease-out both`,
                 marginBottom: i < ZONES.length - 1 ? '-2px' : '0',
               }}
@@ -178,7 +178,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
                 el.style.backgroundColor = PAPER;
                 el.style.borderColor = ANARCHY;
                 el.style.borderLeftColor = ANARCHY;
-                el.style.boxShadow = `8px 8px 0px ${ANARCHY}`;
+                el.style.boxShadow = `10px 10px 0px ${ANARCHY}`;
                 el.style.animation = `navFadeIn 0.25s ${i * 0.05}s ease-out both, p5r-shake 0.15s infinite linear`;
                 // 子元素反色
                 el.querySelectorAll('[data-og]').forEach(s => { s.style.color = BLACK; });
@@ -188,13 +188,13 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
                 el.style.backgroundColor = BLACK;
                 el.style.borderColor = PAPER;
                 el.style.borderLeftColor = PAPER;
-                el.style.boxShadow = `5px 5px 0px ${BLACK}`;
+                el.style.boxShadow = `6px 6px 0px ${BLACK}`;
                 el.style.animation = `navFadeIn 0.25s ${i * 0.05}s ease-out both`;
                 el.querySelectorAll('[data-og]').forEach(s => { s.style.color = s.dataset.og; });
               }}
             >
               <span data-og={PAPER}
-                style={{ fontSize: '16px', transform: 'skewX(10deg)', flexShrink: 0, color: PAPER, transition: 'color 0.12s' }}>
+                style={{ fontSize: '20px', transform: 'skewX(10deg)', flexShrink: 0, color: PAPER, transition: 'color 0.12s' }}>
                 {zone.icon}
               </span>
 
@@ -202,7 +202,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
                 <div data-og={PAPER}
                   style={{
                     fontFamily: FONT, fontStyle: 'italic',
-                    fontSize: '13px', fontWeight: '900',
+                    fontSize: '16px', fontWeight: '900',
                     color: PAPER, letterSpacing: '-0.5px', textTransform: 'uppercase',
                     transition: 'color 0.12s',
                   }}>
@@ -211,7 +211,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
                 <div data-og={'#888'}
                   style={{
                     fontFamily: FONT, fontStyle: 'italic',
-                    fontSize: '8px', color: '#888', letterSpacing: '1px', textTransform: 'uppercase',
+                    fontSize: '10px', color: '#888', letterSpacing: '1.5px', textTransform: 'uppercase',
                     marginTop: '1px', transition: 'color 0.12s',
                   }}>
                   {zone.sub}
@@ -219,7 +219,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
               </div>
 
               <span data-og={PAPER}
-                style={{ color: PAPER, fontSize: '14px', transform: 'skewX(10deg)', flexShrink: 0, opacity: 0.6, transition: 'color 0.12s' }}>
+                style={{ color: PAPER, fontSize: '18px', transform: 'skewX(10deg)', flexShrink: 0, opacity: 0.6, transition: 'color 0.12s' }}>
                 ▶
               </span>
             </button>
