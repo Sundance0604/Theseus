@@ -30,7 +30,13 @@ export const ShipPanorama = ({ onNavigateToDialogue }) => {
   const handleBackFromZone = useCallback(() => setEnteredZone(null), []);
 
   const handleEnterDialogue = useCallback((zoneId) => {
-    if (onNavigateToDialogue) onNavigateToDialogue(zoneId);
+    // 信息框消失 → Ship 放大 → 跳转对话
+    setEnteredZone(null);
+    setPhase('zooming');
+    setTimeout(() => {
+      setPhase('launched');
+      if (onNavigateToDialogue) onNavigateToDialogue(zoneId);
+    }, 1200);
   }, [onNavigateToDialogue]);
 
   return (

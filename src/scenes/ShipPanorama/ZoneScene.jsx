@@ -1,122 +1,107 @@
 import React from 'react';
 import { PERSONAS } from '../../config/personas';
-import { COLORS } from '../../config/constants';
 
-/**
- * 子场景：进入飞船不同区域后的交互界面
- * - 船员室 → 选择船员交流
- * - 作战会议室 → 多人研讨
- * - 船长室 → 个人看板
- * - 引擎室 → 系统状态
- * - 档案室 → 历史记录
- */
+/* ==========================================================================
+   ZoneScene — P5R 波普朋克红底白框子场景
+   限色: 纯红 #D40000 / 暖白 #F5F0EB / 纯黑 #1A1A1A
+   无抖动动画，简洁硬朗
+   ========================================================================== */
+const RED = '#D40000';
+const PAPER = '#F5F0EB';
+const BLACK = '#1A1A1A';
+const FONT = '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif';
+
 export const ZoneScene = ({ zone, onBack, onEnterDialogue }) => {
   if (!zone) return null;
 
-  const zoneStyles = getZoneStyle(zone.id);
-
   return (
     <div style={{
-      position: 'absolute',
-      top: 0, left: 0, right: 0, bottom: 0,
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
       zIndex: 30,
-      backgroundColor: 'rgba(0,0,0,0.92)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      animation: 'sceneFadeIn 0.35s ease-out',
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      display: 'flex', justifyContent: 'center', alignItems: 'center',
+      animation: 'sceneFadeIn 0.25s ease-out',
     }}>
       <div style={{
-        backgroundColor: COLORS.ANARCHY_BLACK,
-        border: `3px solid ${zone.color}`,
-        width: '90%',
-        maxWidth: '700px',
-        maxHeight: '80%',
-        padding: '30px',
-        transform: 'skewX(-3deg)',
-        boxShadow: `12px 12px 0px ${COLORS.BLACK}`,
+        backgroundColor: RED,
+        border: `4px solid ${PAPER}`,
+        width: '90%', maxWidth: '760px', maxHeight: '82%',
+        padding: '36px 40px',
+        transform: 'skewX(-8deg)',
+        boxShadow: `14px 14px 0px ${BLACK}`,
         overflowY: 'auto',
       }}>
-        <div style={{ transform: 'skewX(3deg)' }}>
-          {/* 标题 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ transform: 'skewX(8deg)' }}>
+          {/* ---- 标题行 ---- */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '22px' }}>
             <button
               onClick={onBack}
               style={{
                 background: 'none',
-                border: `2px solid ${zone.color}`,
-                color: zone.color,
-                padding: '6px 14px',
-                fontFamily: 'monospace',
-                fontSize: '14px',
+                border: `3px solid ${PAPER}`,
+                color: PAPER,
+                padding: '8px 18px',
+                fontFamily: FONT, fontStyle: 'italic', fontWeight: '900',
+                fontSize: '14px', letterSpacing: '0px', textTransform: 'uppercase',
                 cursor: 'pointer',
+                boxShadow: `4px 4px 0px ${BLACK}`,
               }}
-            >
-              ← 甲板
-            </button>
+            >← DECK</button>
             <h2 style={{
-              margin: 0,
-              color: zone.color,
-              fontFamily: 'monospace',
-              fontSize: '22px',
-              letterSpacing: '3px',
+              margin: 0, color: PAPER,
+              fontFamily: FONT, fontStyle: 'italic', fontWeight: '900',
+              fontSize: '28px', letterSpacing: '-0.5px', textTransform: 'uppercase',
+              textShadow: `4px 4px 0px ${BLACK}`,
             }}>
-              {zone.label} // {zone.sub}
+              {zone.label}
             </h2>
           </div>
 
-          <div style={{
-            width: '100%',
-            height: '2px',
-            backgroundColor: zone.color,
-            marginBottom: '24px',
-            opacity: 0.5,
-          }} />
+          {/* ---- 分割线 ---- */}
+          <div style={{ width: '100%', height: '3px', backgroundColor: PAPER, marginBottom: '24px', boxShadow: `3px 3px 0px ${BLACK}` }} />
 
-          {/* 区域特有内容 */}
-          {renderZoneContent(zone, zoneStyles, onEnterDialogue)}
+          {/* ---- 区域内容 ---- */}
+          {renderZoneContent(zone, onEnterDialogue)}
         </div>
       </div>
 
-      <style>{`
-        @keyframes sceneFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
+      <style>{`@keyframes sceneFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
     </div>
   );
 };
 
-function renderZoneContent(zone, style, onEnterDialogue) {
+function renderZoneContent(zone, onEnterDialogue) {
   switch (zone.id) {
-    case 'crew':
-      return <CrewQuartersContent onEnterDialogue={onEnterDialogue} />;
-    case 'warRoom':
-      return <WarRoomContent />;
-    case 'captain':
-      return <CaptainsCabinContent />;
-    case 'engine':
-      return <EngineRoomContent />;
-    case 'archive':
-      return <ArchiveContent />;
-    case 'memoryWard':
-      return <MemoryWardContent />;
-    default:
-      return <p style={{ color: '#999', fontFamily: 'monospace' }}>该区域正在建设中...</p>;
+    case 'crew':       return <CrewQuartersContent onEnterDialogue={onEnterDialogue} />;
+    case 'warRoom':    return <InfoPlaceholder label="WAR ROOM" desc="Multi-character seminar — coming soon." />;
+    case 'captain':    return <InfoPlaceholder label="CAPTAIN'S CABIN" desc="Personal dashboard — coming soon." />;
+    case 'engine':     return <InfoPlaceholder label="ENGINE ROOM" desc="System status — coming soon." />;
+    case 'archive':    return <InfoPlaceholder label="ARCHIVE" desc="Historical records — coming soon." />;
+    case 'memoryWard': return <InfoPlaceholder label="MEMORY WARD" desc="Isolated memory viewer — coming soon." />;
+    default:           return null;
   }
 }
 
-/* ---- 船员室 ---- */
+/* ---- 占位页面 ---- */
+function InfoPlaceholder({ label, desc }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '30px' }}>
+      <p style={{ margin: 0, fontFamily: FONT, fontStyle: 'italic', fontWeight: '900', fontSize: '22px', color: PAPER, textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</p>
+      <p style={{ margin: '12px 0 0', fontFamily: FONT, fontStyle: 'italic', fontSize: '13px', color: PAPER, opacity: 0.7, textTransform: 'uppercase' }}>{desc}</p>
+    </div>
+  );
+}
+
+/* ---- 船员室：选择船员 ---- */
 function CrewQuartersContent({ onEnterDialogue }) {
   const crewIds = ['cindy', 'noodles', 'valse', 'orc', 'pavane', 'sofies', 'socrates', 'lin'];
   return (
     <div>
-      <p style={{ color: '#999', fontFamily: 'monospace', fontSize: '12px', marginBottom: '20px', letterSpacing: '1px' }}>
-        选择一位船员进行 1v1 对话。每位船员拥有独立的人格与记忆。
+      <p style={{ fontFamily: FONT, fontStyle: 'italic', fontSize: '14px', color: PAPER, opacity: 0.85, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '20px' }}>
+        SELECT A CREW MEMBER FOR 1-ON-1 DIALOGUE
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-        {crewIds.map((id) => {
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+        {crewIds.map(id => {
           const p = PERSONAS[id];
           if (!p) return null;
           return (
@@ -124,58 +109,33 @@ function CrewQuartersContent({ onEnterDialogue }) {
               key={id}
               onClick={() => onEnterDialogue(id)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '14px 16px',
-                backgroundColor: 'rgba(255,255,255,0.04)',
+                display: 'flex', alignItems: 'center', gap: '14px',
+                padding: '16px 18px',
+                backgroundColor: BLACK,
                 border: `2px solid ${p.color}`,
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.2s',
+                cursor: 'pointer', textAlign: 'left',
+                transform: 'skewX(-5deg)',
+                boxShadow: `5px 5px 0px ${BLACK}`,
+                transition: 'transform 0.15s ease, background-color 0.12s',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)';
-                e.currentTarget.style.transform = 'scale(1.02)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'skewX(-5deg) scale(1.03)'; e.currentTarget.style.backgroundColor = '#0D0D0D'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'skewX(-5deg) scale(1)'; e.currentTarget.style.backgroundColor = BLACK; }}
             >
-              {/* 头像 */}
               <div style={{
-                width: '44px',
-                height: '44px',
+                width: '48px', height: '48px', flexShrink: 0,
                 backgroundColor: p.color,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '20px',
-                flexShrink: 0,
-              }}>
-                {p.emoji}
-              </div>
-              {/* 信息 */}
-              <div>
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '24px', border: `2px solid ${PAPER}`,
+              }}>{p.emoji}</div>
+              <div style={{ transform: 'skewX(5deg)', minWidth: 0 }}>
                 <div style={{
-                  fontFamily: 'monospace',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  color: p.color,
-                  letterSpacing: '1px',
-                }}>
-                  {p.name}
-                </div>
+                  fontFamily: FONT, fontStyle: 'italic', fontWeight: '900',
+                  fontSize: '16px', color: p.color, textTransform: 'uppercase', letterSpacing: '0px',
+                }}>{p.name}</div>
                 <div style={{
-                  fontFamily: 'monospace',
-                  fontSize: '10px',
-                  color: '#777',
-                  letterSpacing: '0.5px',
-                  marginTop: '2px',
-                }}>
-                  {p.domain} — {p.tagline}
-                </div>
+                  fontFamily: FONT, fontStyle: 'italic',
+                  fontSize: '9px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px',
+                }}>{p.domain} — {p.tagline}</div>
               </div>
             </button>
           );
@@ -183,152 +143,4 @@ function CrewQuartersContent({ onEnterDialogue }) {
       </div>
     </div>
   );
-}
-
-/* ---- 作战会议室 ---- */
-function WarRoomContent() {
-  return (
-    <div>
-      <p style={{ color: '#999', fontFamily: 'monospace', fontSize: '12px', marginBottom: '16px', letterSpacing: '1px' }}>
-        作战会议室 (War Room) 支持多角色环形研讨。Socrates 可随时"闯入"讨论。
-      </p>
-      <div style={{
-        padding: '30px',
-        backgroundColor: 'rgba(65,105,225,0.08)',
-        border: '1px solid rgba(65,105,225,0.3)',
-        textAlign: 'center',
-      }}>
-        <span style={{ fontFamily: 'monospace', fontSize: '14px', color: '#4169E1', letterSpacing: '2px' }}>
-          🏛️ 研讨室即将开放
-        </span>
-        <p style={{ fontFamily: 'monospace', fontSize: '10px', color: '#555', marginTop: '8px' }}>
-          多人研讨功能正在开发中...
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ---- 船长室 ---- */
-function CaptainsCabinContent() {
-  return (
-    <div>
-      <p style={{ color: '#999', fontFamily: 'monospace', fontSize: '12px', marginBottom: '16px', letterSpacing: '1px' }}>
-        船长室 (Captain's Cabin) — 你的个人计划看板与船员便签收集处。
-      </p>
-      <div style={{
-        padding: '30px',
-        backgroundColor: 'rgba(218,165,32,0.08)',
-        border: '1px solid rgba(218,165,32,0.3)',
-        textAlign: 'center',
-      }}>
-        <span style={{ fontFamily: 'monospace', fontSize: '14px', color: '#DAA520', letterSpacing: '2px' }}>
-          ⚓ 船长室即将开放
-        </span>
-        <p style={{ fontFamily: 'monospace', fontSize: '10px', color: '#555', marginTop: '8px' }}>
-          个人任务看板功能正在开发中...
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ---- 引擎室 ---- */
-function EngineRoomContent() {
-  return (
-    <div>
-      <p style={{ color: '#999', fontFamily: 'monospace', fontSize: '12px', marginBottom: '16px', letterSpacing: '1px' }}>
-        引擎室 (Engine Room) — 系统状态监控与维护。
-      </p>
-      <div style={{
-        padding: '30px',
-        backgroundColor: 'rgba(34,139,34,0.08)',
-        border: '1px solid rgba(34,139,34,0.3)',
-        textAlign: 'center',
-      }}>
-        <span style={{ fontFamily: 'monospace', fontSize: '14px', color: '#228B22', letterSpacing: '2px' }}>
-          ⚙️ 引擎室
-        </span>
-        <div style={{ marginTop: '12px', fontFamily: 'monospace', fontSize: '11px' }}>
-          <div style={{ color: '#00E676', marginBottom: '4px' }}>DeepSeek API: 连接正常</div>
-          <div style={{ color: '#00E676', marginBottom: '4px' }}>Pixi.js Renderer: 运行中</div>
-          <div style={{ color: '#FFD700' }}>React 19: 已挂载</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---- 档案室 ---- */
-function ArchiveContent() {
-  return (
-    <div>
-      <p style={{ color: '#999', fontFamily: 'monospace', fontSize: '12px', marginBottom: '16px', letterSpacing: '1px' }}>
-        档案室 (Archive) — 历史研讨会记录与知识库。
-      </p>
-      <div style={{
-        padding: '30px',
-        backgroundColor: 'rgba(112,128,144,0.08)',
-        border: '1px solid rgba(112,128,144,0.3)',
-        textAlign: 'center',
-      }}>
-        <span style={{ fontFamily: 'monospace', fontSize: '14px', color: '#708090', letterSpacing: '2px' }}>
-          📜 档案室
-        </span>
-        <p style={{ fontFamily: 'monospace', fontSize: '10px', color: '#555', marginTop: '8px' }}>
-          暂无存档记录。开始对话后，历史记录将自动保存于此。
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ---- 心理室 ---- */
-function MemoryWardContent() {
-  return (
-    <div>
-      <p style={{ color: '#999', fontFamily: 'monospace', fontSize: '12px', marginBottom: '16px', letterSpacing: '1px' }}>
-        心理室 (Memory Ward) — 宪法级记忆硬隔离查看器。非当前激活角色严禁翻阅。
-      </p>
-      <div style={{
-        padding: '30px',
-        backgroundColor: 'rgba(255,215,0,0.06)',
-        border: '2px solid rgba(255,215,0,0.2)',
-        textAlign: 'center',
-      }}>
-        <span style={{ fontFamily: 'monospace', fontSize: '14px', color: '#FFD700', letterSpacing: '2px' }}>
-          🔒 心理室
-        </span>
-        <p style={{ fontFamily: 'monospace', fontSize: '10px', color: '#555', marginTop: '8px' }}>
-          记忆隔离系统已激活。请选择角色后查看其私密记忆库。
-        </p>
-        <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {['cindy', 'noodles', 'valse', 'orc', 'pavane', 'sofies', 'socrates', 'lin'].map(id => {
-            const p = PERSONAS[id];
-            return (
-              <span key={id} style={{
-                padding: '4px 10px', fontFamily: 'monospace', fontSize: '9px',
-                color: p?.color || '#999', border: `1px solid ${p?.color || '#444'}`,
-                opacity: 0.6,
-              }}>
-                {p?.name || id}
-              </span>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function getZoneStyle(zoneId) {
-  const styles = {
-    crew: { color: '#FFB7C5', accent: 'rgba(255,183,197,0.1)' },
-    warRoom: { color: '#4169E1', accent: 'rgba(65,105,225,0.1)' },
-    captain: { color: '#DAA520', accent: 'rgba(218,165,32,0.1)' },
-    engine: { color: '#228B22', accent: 'rgba(34,139,34,0.1)' },
-    archive: { color: '#708090', accent: 'rgba(112,128,144,0.1)' },
-    memoryWard: { color: '#FFD700', accent: 'rgba(255,215,0,0.08)' },
-  };
-  return styles[zoneId] || { color: COLORS.P5R_RED, accent: 'rgba(211,47,47,0.1)' };
 }
