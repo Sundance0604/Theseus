@@ -11,6 +11,15 @@ node_modules
 dist
 dist-ssr
 *.local
+bridge-server/data/
+.env
+.env.*
+!.env.example
+theseus.local.json
+local-personas/
+personas/
+**/memories/
+**/conversations/
 
 # Editor directories and files
 .vscode/*

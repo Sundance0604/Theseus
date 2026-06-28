@@ -1,9 +1,24 @@
 import React, { useEffect, useRef } from 'react';
 import * as PIXI from 'pixi.js';
 
-export const GameBackground = ({ partReplacement }) => {
+function hexToPixi(hex) {
+  const cleaned = hex.replace('#', '');
+  return parseInt(cleaned, 16);
+}
+
+export const GameBackground = ({ partReplacement, activeColor = '#D32F2F' }) => {
   const canvasRef = useRef(null);
   const isInitialized = useRef(false);
+  const activeColorRef = useRef(activeColor);
+  const partReplacementRef = useRef(partReplacement);
+
+  useEffect(() => {
+    activeColorRef.current = activeColor;
+  }, [activeColor]);
+
+  useEffect(() => {
+    partReplacementRef.current = partReplacement;
+  }, [partReplacement]);
 
   useEffect(() => {
     if (isInitialized.current) return;
@@ -15,7 +30,7 @@ export const GameBackground = ({ partReplacement }) => {
 
     app.init({ resizeTo: window, backgroundColor: 0x1a1a1a }).then(() => {
       if (isDestroyed) {
-        app.destroy(true, { children: true, texture: true });
+        app.destroy(true, { children: true });
         return;
       }
       if (canvasRef.current) {
@@ -31,7 +46,9 @@ export const GameBackground = ({ partReplacement }) => {
         const dynamicOffset = Math.sin(time) * 20;
 
         skewBlock.clear();
-        const blockColor = partReplacement === 100 ? 0x1A237E : 0xD32F2F;
+        const blockColor = partReplacementRef.current === 100
+          ? 0x1A237E
+          : hexToPixi(activeColorRef.current);
         skewBlock.fill(blockColor);
 
         skewBlock.moveTo(0, 0);
@@ -46,10 +63,10 @@ export const GameBackground = ({ partReplacement }) => {
       isDestroyed = true;
       isInitialized.current = false;
       setTimeout(() => {
-        try { app.destroy(true, { children: true, texture: true }); } catch (e) {}
+        try { app.destroy(true, { children: true }); } catch {}
       }, 0);
     };
-  }, [partReplacement]);
+  }, []);
 
   return (
     <div
@@ -60,6 +77,8 @@ export const GameBackground = ({ partReplacement }) => {
         left: 0,
         width: '100%',
         height: '100%',
+        minWidth: '100vw',
+        minHeight: '100vh',
         zIndex: 1,
         overflow: 'hidden',
       }}

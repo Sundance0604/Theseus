@@ -9,10 +9,9 @@ import { COLORS } from '../config/constants';
    ========================================================================== */
 
 /** 单条消息气泡 + 头像槽 */
-const MessageRow = ({ msg, index, isLastAi, isLastStreaming }) => {
+const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
   const isAi = msg.sender === 'ai';
   const isError = msg.isError;
-  const isUser = msg.sender === 'user';
 
   // 根据消息发送者决定对齐方向与斜切角度
   const justifyContent = isAi ? 'flex-start' : 'flex-end';
@@ -42,8 +41,9 @@ const MessageRow = ({ msg, index, isLastAi, isLastStreaming }) => {
   const avatarBorder = isAi
     ? `2px solid ${bubbleBorderColor}`
     : `2px solid ${COLORS.ANARCHY_RED}`;
-  const avatarContent = isAi ? '⚓' : 'LAU';
+  const avatarContent = isAi ? (activePersona?.emoji || '⚓') : 'YOU';
   const avatarContentColor = isAi ? bubbleBorderColor : COLORS.ANARCHY_RED;
+  const photoUrl = isAi ? activePersona?.avatarUrl : null;
 
   // --- 气泡尖角 (CSS border triangle) ---
   const tailSize = 10;
@@ -86,7 +86,7 @@ const MessageRow = ({ msg, index, isLastAi, isLastStreaming }) => {
         marginBottom: '6px',
         fontWeight: 'bold',
       }}>
-        {isAi ? 'THESEUS' : 'COMMAND'} // {headerLabel}
+        {isAi ? (activePersona?.name || 'THESEUS').toUpperCase() : 'COMMAND'} // {headerLabel}
       </div>
 
       {/* 正文 — 与气泡共享同一 skewX，自然匹配平行四边形 */}
@@ -109,7 +109,7 @@ const MessageRow = ({ msg, index, isLastAi, isLastStreaming }) => {
   const bubbleBox = (
     <div style={{
       position: 'relative',
-      maxWidth: isAi ? 'min(720px, 68%)' : 'min(560px, 58%)',
+      maxWidth: isAi ? 'min(68%, 750px)' : 'min(58%, 580px)',
       minWidth: 0,
       flexShrink: 1,
       padding: '24px 40px',
@@ -142,15 +142,29 @@ const MessageRow = ({ msg, index, isLastAi, isLastStreaming }) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: isAi ? '22px' : '18px',
-      fontWeight: 'bold',
-      fontFamily: 'monospace',
-      color: avatarContentColor,
-      userSelect: 'none',
+      overflow: 'hidden',
     }}>
-      <span style={{ transform: isAi ? 'skewX(12deg)' : 'skewX(-12deg)' }}>
-        {avatarContent}
-      </span>
+      {isAi && photoUrl ? (
+        <img
+          src={photoUrl}
+          alt={activePersona?.name || 'AI'}
+          style={{
+            width: '100%', height: '100%', objectFit: 'cover',
+            transform: 'skewX(12deg)',
+          }}
+        />
+      ) : (
+        <span style={{
+          transform: isAi ? 'skewX(12deg)' : 'skewX(-12deg)',
+          fontSize: isAi ? '22px' : '18px',
+          fontWeight: 'bold',
+          fontFamily: 'monospace',
+          color: avatarContentColor,
+          userSelect: 'none',
+        }}>
+          {avatarContent}
+        </span>
+      )}
     </div>
   );
 
@@ -183,6 +197,7 @@ const MessageRow = ({ msg, index, isLastAi, isLastStreaming }) => {
           gap: '16px',
           maxWidth: '100%',
           minWidth: 0,               /* 允许在窄屏时收缩 */
+          flexShrink: 1,             /* 允许在窄屏时将整组收缩 */
         }}>
           {bubbleBox}
           {avatarSlot}
@@ -195,7 +210,7 @@ const MessageRow = ({ msg, index, isLastAi, isLastStreaming }) => {
 /* ==========================================================================
    主组件: 统一时间轴聊天流
    ========================================================================== */
-export const AiDialogueStream = ({ chatHistory, isStreaming }) => {
+export const AiDialogueStream = ({ chatHistory, activePersona }) => {
   const scrollRef = useRef(null);
   const prevLengthRef = useRef(0);
 
@@ -221,8 +236,9 @@ export const AiDialogueStream = ({ chatHistory, isStreaming }) => {
         flex: 1,
         overflowY: 'auto',
         overflowX: 'hidden',              /* 安全网：截断 skewX 超出的像素级溢出 */
-        /* ★ 百分比内边距自适应视口宽度: min 40px / 理想 6% / max 120px */
-        padding: '30px clamp(40px, 6%, 120px)',
+        minWidth: '0',
+        /* ★ 自适应水平内边距：最少40px，随视口缩放宽至 6%，上限120px */
+        padding: '30px clamp(40px, 7%, 140px)',
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',
@@ -248,8 +264,8 @@ export const AiDialogueStream = ({ chatHistory, isStreaming }) => {
                 .slice(0, i + 1)
                 .filter((m) => m.sender === msg.sender).length
             }
-            isLastAi={isLastAi}
             isLastStreaming={isLastStreaming}
+            activePersona={activePersona}
           />
         );
       })}
