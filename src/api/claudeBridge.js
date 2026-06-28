@@ -12,10 +12,15 @@ const BRIDGE_URL = import.meta.env.VITE_LOCAL_AI_URL || 'http://127.0.0.1:3099';
 
 async function readErrorResponse(response) {
   try {
-    const body = await response.json();
-    return body.error || JSON.stringify(body);
+    const text = await response.text();
+    try {
+      const body = JSON.parse(text);
+      return body.error || text;
+    } catch {
+      return text;
+    }
   } catch {
-    return response.text();
+    return `HTTP ${response.status}`;
   }
 }
 
@@ -43,6 +48,18 @@ export async function getLocalHistory(personaId) {
   return response.json();
 }
 
+export async function getLocalProfile() {
+  const response = await fetch(`${BRIDGE_URL}/profile`);
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  const profile = await response.json();
+  return {
+    ...profile,
+    avatarUrl: profile.hasUserAvatar ? `${BRIDGE_URL}/user-avatar` : '',
+  };
+}
+
 export async function clearLocalHistory(personaId) {
   const response = await fetch(
     `${BRIDGE_URL}/history?personaId=${encodeURIComponent(personaId)}`,
@@ -66,12 +83,13 @@ export async function clearLocalHistory(personaId) {
  * @param {AbortSignal} [options.signal] - 可选的 AbortSignal 用于取消请求
  * @returns {Promise<void>}
  */
-export async function streamClaude({
-  personaId,
-  message,
+async function streamRequest({
+  requestPath,
+  requestBody,
   onChunk,
   onDone,
   onError,
+  onConnected,
   signal,
 }) {
   let fullText = '';
@@ -85,15 +103,12 @@ export async function streamClaude({
   }
 
   try {
-    const response = await fetch(`${BRIDGE_URL}/chat`, {
+    const response = await fetch(`${BRIDGE_URL}${requestPath}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        personaId: personaId || null,
-        message,
-      }),
+      body: JSON.stringify(requestBody),
       signal,
     });
 
@@ -141,7 +156,7 @@ export async function streamClaude({
 
           switch (eventType) {
             case 'connected':
-              // 连接确认，无需处理
+              onConnected?.(parsed);
               break;
 
             case 'chunk':
@@ -196,6 +211,38 @@ export async function streamClaude({
       onError(error);
     }
   }
+}
+
+export function streamClaude({ personaId, message, ...callbacks }) {
+  return streamRequest({
+    requestPath: '/chat',
+    requestBody: {
+      personaId: personaId || null,
+      message,
+    },
+    ...callbacks,
+  });
+}
+
+export function startLocalSeminar({ participantIds, ...callbacks }) {
+  return streamRequest({
+    requestPath: '/seminar/start',
+    requestBody: { participantIds },
+    ...callbacks,
+  });
+}
+
+export function streamLocalSeminarMessage({
+  seminarId,
+  personaId,
+  message,
+  ...callbacks
+}) {
+  return streamRequest({
+    requestPath: '/seminar/chat',
+    requestBody: { seminarId, personaId, message },
+    ...callbacks,
+  });
 }
 
 /**

@@ -12,6 +12,14 @@
 - [ ] The workspace is private or excluded from Git.
 - [ ] API keys are stored in environment variables or an OS credential store.
 
+These two localized keys are read by the application. Keep the labels unchanged
+and replace only the values:
+
+```markdown
+- 用户头像：`photo/<private-user-portrait>.png`
+- 研讨会主持人：`<persona-id>`
+```
+
 ## Persona inventory
 
 Repeat this section for each persona:
