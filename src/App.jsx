@@ -231,7 +231,7 @@ function App() {
             </div>
           )}
 
-          {/* 中央对话视窗 — 左右无边距，全宽沉浸 */}
+          {/* 中央对话视窗 */}
           <div style={{
             position: 'absolute',
             top: '55px',
@@ -241,7 +241,6 @@ function App() {
             zIndex: 2,
             display: 'flex',
             flexDirection: 'column',
-            minWidth: '0',
           }}>
             <AiDialogueStream
               chatHistory={chatHistory}

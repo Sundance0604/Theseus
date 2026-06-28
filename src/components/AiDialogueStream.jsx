@@ -109,7 +109,7 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
   const bubbleBox = (
     <div style={{
       position: 'relative',
-      maxWidth: isAi ? 'min(68%, 750px)' : 'min(58%, 580px)',
+      maxWidth: isAi ? 'min(720px, 68%)' : 'min(560px, 58%)',
       minWidth: 0,
       flexShrink: 1,
       padding: '24px 40px',
@@ -197,7 +197,6 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
           gap: '16px',
           maxWidth: '100%',
           minWidth: 0,               /* 允许在窄屏时收缩 */
-          flexShrink: 1,             /* 允许在窄屏时将整组收缩 */
         }}>
           {bubbleBox}
           {avatarSlot}
@@ -236,9 +235,8 @@ export const AiDialogueStream = ({ chatHistory, activePersona }) => {
         flex: 1,
         overflowY: 'auto',
         overflowX: 'hidden',              /* 安全网：截断 skewX 超出的像素级溢出 */
-        minWidth: '0',
-        /* ★ 自适应水平内边距：最少40px，随视口缩放宽至 6%，上限120px */
-        padding: '30px clamp(40px, 7%, 140px)',
+        /* ★ 百分比内边距自适应视口宽度: min 40px / 理想 6% / max 120px */
+        padding: '30px clamp(40px, 6%, 120px)',
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',
