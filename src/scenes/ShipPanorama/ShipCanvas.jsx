@@ -353,6 +353,16 @@ function createShip(app) {
       w: w * 0.32, h: h * 0.42,
       labelX: -w / 3, labelY: h / 2 + 35,
     },
+    {
+      id: 'memoryWard',
+      label: '心理室',
+      sub: 'Memory Ward',
+      color: 0xFFD700,
+      // 船体后部上方 (舰桥后方)
+      x: -w * 0.02, y: -h / 2 + 2,
+      w: w * 0.22, h: h * 0.38,
+      labelX: w / 4, labelY: -h / 2 - 50,
+    },
   ];
 
   // ====== 绘制区域高亮 + 折线 + 标签 ======
