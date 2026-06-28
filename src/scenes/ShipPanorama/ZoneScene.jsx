@@ -100,6 +100,8 @@ function renderZoneContent(zone, style, onEnterDialogue) {
       return <EngineRoomContent />;
     case 'archive':
       return <ArchiveContent />;
+    case 'memoryWard':
+      return <MemoryWardContent />;
     default:
       return <p style={{ color: '#999', fontFamily: 'monospace' }}>该区域正在建设中...</p>;
   }
@@ -281,6 +283,44 @@ function ArchiveContent() {
   );
 }
 
+/* ---- 心理室 ---- */
+function MemoryWardContent() {
+  return (
+    <div>
+      <p style={{ color: '#999', fontFamily: 'monospace', fontSize: '12px', marginBottom: '16px', letterSpacing: '1px' }}>
+        心理室 (Memory Ward) — 宪法级记忆硬隔离查看器。非当前激活角色严禁翻阅。
+      </p>
+      <div style={{
+        padding: '30px',
+        backgroundColor: 'rgba(255,215,0,0.06)',
+        border: '2px solid rgba(255,215,0,0.2)',
+        textAlign: 'center',
+      }}>
+        <span style={{ fontFamily: 'monospace', fontSize: '14px', color: '#FFD700', letterSpacing: '2px' }}>
+          🔒 心理室
+        </span>
+        <p style={{ fontFamily: 'monospace', fontSize: '10px', color: '#555', marginTop: '8px' }}>
+          记忆隔离系统已激活。请选择角色后查看其私密记忆库。
+        </p>
+        <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {['cindy', 'noodles', 'valse', 'orc', 'pavane', 'sofies', 'socrates', 'lin'].map(id => {
+            const p = PERSONAS[id];
+            return (
+              <span key={id} style={{
+                padding: '4px 10px', fontFamily: 'monospace', fontSize: '9px',
+                color: p?.color || '#999', border: `1px solid ${p?.color || '#444'}`,
+                opacity: 0.6,
+              }}>
+                {p?.name || id}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function getZoneStyle(zoneId) {
   const styles = {
     crew: { color: '#FFB7C5', accent: 'rgba(255,183,197,0.1)' },
@@ -288,6 +328,7 @@ function getZoneStyle(zoneId) {
     captain: { color: '#DAA520', accent: 'rgba(218,165,32,0.1)' },
     engine: { color: '#228B22', accent: 'rgba(34,139,34,0.1)' },
     archive: { color: '#708090', accent: 'rgba(112,128,144,0.1)' },
+    memoryWard: { color: '#FFD700', accent: 'rgba(255,215,0,0.08)' },
   };
   return styles[zoneId] || { color: COLORS.P5R_RED, accent: 'rgba(211,47,47,0.1)' };
 }
