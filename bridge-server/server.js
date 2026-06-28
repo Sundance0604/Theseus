@@ -55,6 +55,7 @@ const PERSONA_PROFILE_PATH = PERSONA_HOME
   : '';
 const DATA_DIR =
   process.env.THESEUS_DATA_DIR || path.join(__dirname, 'data', 'conversations');
+const SEMINAR_DIR = path.join(path.dirname(DATA_DIR), 'seminars');
 
 const activeRequests = new Map();
 const FALLBACK_COLORS = [
@@ -79,6 +80,7 @@ const NAMED_COLORS = {
 };
 
 mkdirSync(DATA_DIR, { recursive: true });
+mkdirSync(SEMINAR_DIR, { recursive: true });
 
 function parseFrontmatter(markdown) {
   const match = markdown.match(/^---\s*\r?\n([\s\S]*?)\r?\n---/);
@@ -153,6 +155,20 @@ function readPersonaProfile() {
   return overrides;
 }
 
+function readWorkspaceProfile() {
+  if (!PERSONA_PROFILE_PATH || !existsSync(PERSONA_PROFILE_PATH)) {
+    return { facilitatorId: '', userAvatar: '' };
+  }
+  const markdown = readFileSync(PERSONA_PROFILE_PATH, 'utf8');
+  return {
+    facilitatorId: (
+      markdown.match(/研讨会主持人[：:]\s*`([^`]+)`/i)?.[1] || ''
+    ).toLowerCase(),
+    userAvatar:
+      markdown.match(/用户头像[：:]\s*`([^`]+)`/i)?.[1] || '',
+  };
+}
+
 function readPersona(personaId) {
   const files = personaFiles();
   const normalizedId = String(personaId || '').toLowerCase();
@@ -165,6 +181,7 @@ function readPersona(personaId) {
   const source = readFileSync(sourcePath, 'utf8');
   const meta = parseFrontmatter(source);
   const profile = readPersonaProfile().get(normalizedId) || {};
+  const workspaceProfile = readWorkspaceProfile();
   const configuredColor = profile.color || meta.color || '';
   const color = /^#[0-9a-f]{6}$/i.test(configuredColor)
     ? configuredColor
@@ -184,6 +201,7 @@ function readPersona(personaId) {
     color,
     themeName: profile.themeName || '',
     avatar: profile.avatar || meta.avatar || '',
+    isFacilitator: normalizedId === workspaceProfile.facilitatorId,
   };
 }
 
@@ -252,6 +270,53 @@ function saveTranscript(transcript) {
   const file = transcriptPath(transcript.personaId);
   const temp = `${file}.${process.pid}.tmp`;
   writeFileSync(temp, JSON.stringify(transcript, null, 2), 'utf8');
+  renameSync(temp, file);
+}
+
+function assertSeminarId(value) {
+  if (
+    typeof value !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value)
+  ) {
+    const error = new Error('无效的研讨会 ID');
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+function seminarPath(seminarId) {
+  assertSeminarId(seminarId);
+  return path.join(SEMINAR_DIR, `${seminarId}.json`);
+}
+
+function createSeminar(participantIds, facilitatorId) {
+  const now = new Date().toISOString();
+  return {
+    id: randomUUID(),
+    sessionId: randomUUID(),
+    participantIds,
+    facilitatorId,
+    messages: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function loadSeminar(seminarId) {
+  const file = seminarPath(seminarId);
+  if (!existsSync(file)) {
+    const error = new Error('研讨会不存在');
+    error.statusCode = 404;
+    throw error;
+  }
+  return JSON.parse(readFileSync(file, 'utf8'));
+}
+
+function saveSeminar(seminar) {
+  seminar.updatedAt = new Date().toISOString();
+  const file = seminarPath(seminar.id);
+  const temp = `${file}.${process.pid}.tmp`;
+  writeFileSync(temp, JSON.stringify(seminar, null, 2), 'utf8');
   renameSync(temp, file);
 }
 
@@ -346,7 +411,13 @@ function parseClaudeLine(line, state, res) {
   }
 }
 
-function callClaude({ persona, transcript, message, res }) {
+function callClaude({
+  persona,
+  transcript,
+  message,
+  res,
+  requestKey = persona.id,
+}) {
   return new Promise((resolve) => {
     const executable = claudeExecutable();
     const args = buildClaudeArgs({ transcript, persona, message });
@@ -358,7 +429,7 @@ function callClaude({ persona, transcript, message, res }) {
       shell: false,
     });
 
-    activeRequests.set(persona.id, child);
+    activeRequests.set(requestKey, child);
     const state = {
       fullText: '',
       resultText: '',
@@ -373,7 +444,7 @@ function callClaude({ persona, transcript, message, res }) {
     const finish = (result) => {
       if (state.settled) return;
       state.settled = true;
-      activeRequests.delete(persona.id);
+      activeRequests.delete(requestKey);
       resolve(result);
     };
 
@@ -439,6 +510,49 @@ function sendJson(res, statusCode, body) {
   res.end(JSON.stringify(body));
 }
 
+function sendWorkspaceAsset(res, relativePath) {
+  if (!relativePath || !PERSONA_HOME) {
+    sendJson(res, 404, { error: '本地资源未配置' });
+    return;
+  }
+
+  const workspaceRoot = path.resolve(PERSONA_HOME);
+  const assetPath = path.resolve(workspaceRoot, relativePath);
+  if (
+    assetPath !== workspaceRoot &&
+    !assetPath.startsWith(`${workspaceRoot}${path.sep}`)
+  ) {
+    const error = new Error('资源路径超出 Persona 工作区');
+    error.statusCode = 403;
+    throw error;
+  }
+  if (!existsSync(assetPath)) {
+    sendJson(res, 404, { error: '本地资源不存在' });
+    return;
+  }
+
+  const contentTypes = {
+    '.gif': 'image/gif',
+    '.jpeg': 'image/jpeg',
+    '.jpg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+  };
+  const contentType = contentTypes[path.extname(assetPath).toLowerCase()];
+  if (!contentType) {
+    const error = new Error('不支持的本地资源格式');
+    error.statusCode = 415;
+    throw error;
+  }
+
+  res.writeHead(200, {
+    'Content-Type': contentType,
+    'Cache-Control': 'private, max-age=300',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  res.end(readFileSync(assetPath));
+}
+
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -492,29 +606,17 @@ async function handleRequest(req, res) {
     return;
   }
 
-  if (req.method === 'GET' && url.pathname.startsWith('/photo/')) {
-    const photoName = path.basename(url.pathname);
-    if (!photoName || photoName === 'photo') {
-      sendJson(res, 400, { error: 'Missing photo filename' });
-      return;
-    }
-    const photoPath = PERSONA_HOME
-      ? path.join(PERSONA_HOME, 'photo', photoName)
-      : null;
-    if (!photoPath || !existsSync(photoPath)) {
-      sendJson(res, 404, { error: 'Photo not found' });
-      return;
-    }
-    const ext = path.extname(photoName).toLowerCase();
-    const mimeTypes = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
-    const mime = mimeTypes[ext] || 'application/octet-stream';
-    const data = readFileSync(photoPath);
-    res.writeHead(200, {
-      'Content-Type': mime,
-      'Content-Length': data.length,
-      'Cache-Control': 'public, max-age=3600',
+  if (req.method === 'GET' && url.pathname === '/profile') {
+    const profile = readWorkspaceProfile();
+    sendJson(res, 200, {
+      facilitatorId: profile.facilitatorId,
+      hasUserAvatar: Boolean(profile.userAvatar),
     });
-    res.end(data);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/user-avatar') {
+    sendWorkspaceAsset(res, readWorkspaceProfile().userAvatar);
     return;
   }
 
@@ -533,41 +635,7 @@ async function handleRequest(req, res) {
       return;
     }
 
-    const workspaceRoot = path.resolve(PERSONA_HOME);
-    const assetPath = path.resolve(workspaceRoot, persona.avatar);
-    if (
-      assetPath !== workspaceRoot &&
-      !assetPath.startsWith(`${workspaceRoot}${path.sep}`)
-    ) {
-      const error = new Error('头像路径超出 Persona 工作区');
-      error.statusCode = 403;
-      throw error;
-    }
-    if (!existsSync(assetPath)) {
-      sendJson(res, 404, { error: '头像文件不存在' });
-      return;
-    }
-
-    const contentTypes = {
-      '.gif': 'image/gif',
-      '.jpeg': 'image/jpeg',
-      '.jpg': 'image/jpeg',
-      '.png': 'image/png',
-      '.webp': 'image/webp',
-    };
-    const contentType = contentTypes[path.extname(assetPath).toLowerCase()];
-    if (!contentType) {
-      const error = new Error('不支持的头像格式');
-      error.statusCode = 415;
-      throw error;
-    }
-
-    res.writeHead(200, {
-      'Content-Type': contentType,
-      'Cache-Control': 'private, max-age=300',
-      'X-Content-Type-Options': 'nosniff',
-    });
-    res.end(readFileSync(assetPath));
+    sendWorkspaceAsset(res, persona.avatar);
     return;
   }
 
@@ -592,6 +660,173 @@ async function handleRequest(req, res) {
     sendJson(res, 200, {
       messages: publicMessages(transcript, persona),
     });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/seminar') {
+    const seminarId = url.searchParams.get('seminarId') || '';
+    const seminar = loadSeminar(seminarId);
+    sendJson(res, 200, {
+      seminar: {
+        id: seminar.id,
+        participantIds: seminar.participantIds,
+        facilitatorId: seminar.facilitatorId,
+      },
+      messages: seminar.messages,
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/seminar/start') {
+    const body = await readJsonBody(req);
+    const workspaceProfile = readWorkspaceProfile();
+    const facilitatorId = workspaceProfile.facilitatorId;
+    assertPersonaId(facilitatorId);
+
+    const requestedIds = Array.isArray(body.participantIds)
+      ? body.participantIds.map((id) => String(id).toLowerCase())
+      : [];
+    const participantIds = [...new Set([facilitatorId, ...requestedIds])];
+    participantIds.forEach(assertPersonaId);
+    if (participantIds.length < 2) {
+      const error = new Error('研讨会至少需要主持人和一位参会角色');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const seminar = createSeminar(participantIds, facilitatorId);
+    saveSeminar(seminar);
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    sseWrite(res, 'connected', {
+      seminarId: seminar.id,
+      participantIds,
+      facilitatorId,
+    });
+
+    const facilitator = readPersona(facilitatorId);
+    const participantNames = participantIds
+      .map((id) => readPersona(id).name)
+      .join('、');
+    const openingMessage =
+      `现在开会，简述目前状态、参会人员：${participantNames}`;
+    const requestKey = `seminar:${seminar.id}`;
+    const result = await callClaude({
+      persona: facilitator,
+      transcript: seminar,
+      message: openingMessage,
+      res,
+      requestKey,
+    });
+
+    if (result.error) {
+      sseWrite(res, 'error', { message: result.error });
+      res.end();
+      return;
+    }
+
+    seminar.sessionId = result.sessionId || seminar.sessionId;
+    seminar.messages.push({
+      id: randomUUID(),
+      sender: 'ai',
+      personaId: facilitatorId,
+      text: result.text,
+      createdAt: new Date().toISOString(),
+    });
+    saveSeminar(seminar);
+    sseWrite(res, 'done', {
+      fullText: result.text,
+      personaId: facilitatorId,
+      seminarId: seminar.id,
+    });
+    res.end();
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/seminar/chat') {
+    const body = await readJsonBody(req);
+    const seminarId = String(body.seminarId || '');
+    const personaId = String(body.personaId || '').toLowerCase();
+    const message = String(body.message || '').trim();
+    const seminar = loadSeminar(seminarId);
+
+    assertPersonaId(personaId);
+    if (!seminar.participantIds.includes(personaId)) {
+      const error = new Error('该角色不是本次研讨会参会人员');
+      error.statusCode = 403;
+      throw error;
+    }
+    if (!message) {
+      const error = new Error('消息不能为空');
+      error.statusCode = 400;
+      throw error;
+    }
+    if (message.length > 20_000) {
+      const error = new Error('消息不能超过 20000 个字符');
+      error.statusCode = 400;
+      throw error;
+    }
+    const requestKey = `seminar:${seminar.id}`;
+    if (activeRequests.has(requestKey)) {
+      const error = new Error('研讨会正在发言，请稍候');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    seminar.messages.push({
+      id: randomUUID(),
+      sender: 'user',
+      targetPersonaId: personaId,
+      text: message,
+      createdAt: new Date().toISOString(),
+    });
+    saveSeminar(seminar);
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    sseWrite(res, 'connected', {
+      seminarId: seminar.id,
+      personaId,
+    });
+
+    const persona = readPersona(personaId);
+    const result = await callClaude({
+      persona,
+      transcript: seminar,
+      message,
+      res,
+      requestKey,
+    });
+    if (result.error) {
+      sseWrite(res, 'error', { message: result.error });
+      res.end();
+      return;
+    }
+
+    seminar.sessionId = result.sessionId || seminar.sessionId;
+    seminar.messages.push({
+      id: randomUUID(),
+      sender: 'ai',
+      personaId,
+      text: result.text,
+      createdAt: new Date().toISOString(),
+    });
+    saveSeminar(seminar);
+    sseWrite(res, 'done', {
+      fullText: result.text,
+      personaId,
+      seminarId: seminar.id,
+    });
+    res.end();
     return;
   }
 

@@ -11,12 +11,16 @@ function App() {
     chatHistory,
     partReplacement,
     personas,
+    userProfile,
     activePersona,
+    seminar,
     isStreaming,
     isLoadingHistory,
     localService,
     error,
     sendMessage,
+    sendSeminarMessage,
+    startWarRoom,
     setActivePersonaId,
     cancelStreaming,
     clearHistory,
@@ -26,17 +30,53 @@ function App() {
 
   // scene: 'launch' | 'dialogue'
   const [scene, setScene] = useState('launch');
+  // 从对话返回时直接跳到 NAVIGATION 界面
+  const [backToNav, setBackToNav] = useState(false);
 
-  // 从启动画面进入对话
+  // WAR ROOM 多人对话模式
+  const [dialogueMode, setDialogueMode] = useState('single'); // 'single' | 'warRoom'
+  const [warRoomPersonaIds, setWarRoomPersonaIds] = useState([]);
+  const [warRoomSpeakerId, setWarRoomSpeakerId] = useState(null);
+
+  const warRoomPersonas = personas.filter(p => warRoomPersonaIds.includes(p.id));
+  const facilitator = personas.find(p => p.isFacilitator) || null;
+  const sortedWarRoomPersonas = [...warRoomPersonas].sort((a, b) => {
+    if (a.isFacilitator) return -1;
+    if (b.isFacilitator) return 1;
+    return 0;
+  });
+  const warRoomSpeaker = warRoomPersonas.find(p => p.id === warRoomSpeakerId)
+    || facilitator;
+
+  const isWarRoom = dialogueMode === 'warRoom';
+
+  // 从启动画面进入单人对��
   const handleNavigateToDialogue = (personaId) => {
     if (personaId) {
       setActivePersonaId(personaId);
     }
+    setDialogueMode('single');
     setScene('dialogue');
   };
 
-  // 返回启动画面
+  // WAR ROOM 多选确认 → 进入多人对话
+  const handleNavigateToWarRoom = (selectedIds) => {
+    const participantIds = [
+      ...new Set([facilitator?.id, ...(selectedIds || [])].filter(Boolean)),
+    ];
+    setWarRoomPersonaIds(participantIds);
+    setWarRoomSpeakerId(facilitator?.id || participantIds[0] || null);
+    setDialogueMode('warRoom');
+    setScene('dialogue');
+    startWarRoom(participantIds);
+  };
+
+  // 返回 NAVIGATION 画面
   const handleBackToLaunch = () => {
+    setBackToNav(true);
+    setDialogueMode('single');
+    setWarRoomPersonaIds([]);
+    setWarRoomSpeakerId(null);
     setScene('launch');
   };
 
@@ -54,16 +94,18 @@ function App() {
         <ShipPanorama
           personas={personas}
           onNavigateToDialogue={handleNavigateToDialogue}
+          onNavigateToWarRoom={handleNavigateToWarRoom}
+          initialPhase={backToNav ? 'launched' : undefined}
         />
       )}
 
       {/* ============ 场景2: 对话界面 ============ */}
       {scene === 'dialogue' && (
         <>
-          {/* Pixi.js 动态斜角背景层 */}
+          {/* Pixi.js 动态斜角背景层 — WAR ROOM 强制红色，单人对��跟角色色 */}
           <GameBackground
             partReplacement={partReplacement}
-            activeColor={activePersona?.color}
+            activeColor={dialogueMode === 'warRoom' ? COLORS.ANARCHY_RED : activePersona?.color}
           />
 
           {/* 顶部工具栏 */}
@@ -76,79 +118,132 @@ function App() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '12px 30px',
+            padding: '14px 32px',
           }}>
             {/* 左侧：品牌标题 */}
-            <h1 style={{
-              margin: 0,
-              color: COLORS.P5R_RED,
-              fontFamily: 'monospace',
-              fontSize: '16px',
-              letterSpacing: '4px',
-              textTransform: 'uppercase',
-              textShadow: `3px 3px 0px ${COLORS.BLACK}`,
+            <div style={{
+              backgroundColor: COLORS.ANARCHY_BLACK,
+              border: `3px solid ${dialogueMode === 'warRoom' ? COLORS.ANARCHY_RED : COLORS.P5R_RED}`,
+              transform: 'skewX(-12deg)',
+              padding: '6px 24px',
+              boxShadow: `6px 6px 0px ${COLORS.BLACK}`,
             }}>
-              Ship of Theseus
-            </h1>
+              <h1 style={{
+                margin: 0,
+                color: COLORS.PAPER,
+                fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+                fontStyle: 'italic',
+                fontWeight: '900',
+                fontSize: '18px',
+                letterSpacing: '3px',
+                textTransform: 'uppercase',
+                transform: 'skewX(12deg)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}>
+                Ship of Theseus
+                {dialogueMode === 'warRoom' && (
+                  <span style={{
+                    fontSize: '12px',
+                    color: COLORS.ANARCHY_RED,
+                    backgroundColor: COLORS.PAPER,
+                    padding: '1px 8px',
+                    letterSpacing: '2px',
+                  }}>
+                    WAR ROOM
+                  </span>
+                )}
+              </h1>
+            </div>
 
             {/* 右侧：状态指示器 + 操作按钮 */}
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-              {/* 部件替换率标签 */}
-              <span style={{
-                color: partReplacement >= 100 ? '#5C6BC0' : COLORS.P5R_RED,
-                fontFamily: 'monospace',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                backgroundColor: 'rgba(0,0,0,0.75)',
-                padding: '3px 10px',
-                border: '1px solid currentColor',
-                letterSpacing: '1px',
-              }}>
-                REPLACED {partReplacement}%
-              </span>
-
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {/* 本地 AI 服务状态灯 */}
               <span style={{
                 display: 'inline-block',
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
+                width: '8px',
+                height: '8px',
                 backgroundColor: localService
                   ? (isStreaming ? '#FFD700' : '#00E676')
                   : '#FF1744',
-                boxShadow: `0 0 6px currentColor`,
+                boxShadow: localService
+                  ? `0 0 8px ${isStreaming ? '#FFD700' : '#00E676'}`
+                  : '0 0 8px #FF1744',
+                border: `1px solid ${COLORS.ANARCHY_BLACK}`,
               }}
                 title={localService
                   ? (isStreaming ? 'Claude Code 通信中...' : '本地 AI 服务就绪')
                   : '本地 AI 服务未连接'}
               />
 
-              {/* 返回甲板 */}
+              {/* 返回导航 */}
               <button onClick={handleBackToLaunch} style={{
-                background: 'none',
-                border: '1px solid #555',
-                color: '#999',
-                padding: '3px 10px',
-                fontFamily: 'monospace',
-                fontSize: '10px',
+                background: COLORS.ANARCHY_BLACK,
+                border: `2px solid ${COLORS.PAPER}`,
+                color: COLORS.PAPER,
+                padding: '6px 16px',
+                fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+                fontStyle: 'italic',
+                fontWeight: '900',
+                fontSize: '12px',
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
                 cursor: 'pointer',
-                letterSpacing: '1px',
+                transform: 'skewX(-8deg)',
+                boxShadow: `4px 4px 0px ${COLORS.BLACK}`,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = COLORS.PAPER;
+                e.currentTarget.style.color = COLORS.BLACK;
+                e.currentTarget.style.borderColor = COLORS.ANARCHY_RED;
+                e.currentTarget.style.boxShadow = `4px 4px 0px ${COLORS.ANARCHY_RED}`;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = COLORS.ANARCHY_BLACK;
+                e.currentTarget.style.color = COLORS.PAPER;
+                e.currentTarget.style.borderColor = COLORS.PAPER;
+                e.currentTarget.style.boxShadow = `4px 4px 0px ${COLORS.BLACK}`;
               }}>
-                ← DECK
+                <span style={{ display: 'inline-block', transform: 'skewX(8deg)' }}>← NAV</span>
               </button>
 
               {/* 重置对话 */}
-              <button onClick={clearHistory} style={{
-                background: 'none',
-                border: '1px solid #555',
-                color: '#999',
-                padding: '3px 10px',
-                fontFamily: 'monospace',
-                fontSize: '10px',
-                cursor: 'pointer',
-                letterSpacing: '1px',
+              <button
+                onClick={clearHistory}
+                disabled={isStreaming}
+                style={{
+                background: isStreaming ? '#222' : COLORS.ANARCHY_BLACK,
+                border: `2px solid ${isStreaming ? '#444' : COLORS.PAPER}`,
+                color: isStreaming ? '#555' : COLORS.PAPER,
+                padding: '6px 16px',
+                fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+                fontStyle: 'italic',
+                fontWeight: '900',
+                fontSize: '12px',
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                cursor: isStreaming ? 'not-allowed' : 'pointer',
+                transform: 'skewX(-8deg)',
+                boxShadow: isStreaming ? 'none' : `4px 4px 0px ${COLORS.BLACK}`,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => {
+                if (isStreaming) return;
+                e.currentTarget.style.background = COLORS.PAPER;
+                e.currentTarget.style.color = COLORS.BLACK;
+                e.currentTarget.style.borderColor = COLORS.ANARCHY_RED;
+                e.currentTarget.style.boxShadow = `4px 4px 0px ${COLORS.ANARCHY_RED}`;
+              }}
+              onMouseLeave={e => {
+                if (isStreaming) return;
+                e.currentTarget.style.background = COLORS.ANARCHY_BLACK;
+                e.currentTarget.style.color = COLORS.PAPER;
+                e.currentTarget.style.borderColor = COLORS.PAPER;
+                e.currentTarget.style.boxShadow = `4px 4px 0px ${COLORS.BLACK}`;
               }}>
-                RESET
+                <span style={{ display: 'inline-block', transform: 'skewX(8deg)' }}>RESET</span>
               </button>
 
             </div>
@@ -158,36 +253,44 @@ function App() {
           {error && (
             <div style={{
               position: 'absolute',
-              top: '55px',
+              top: '60px',
               left: '50%',
-              transform: 'translateX(-50%) skewX(-3deg)',
+              transform: 'translateX(-50%) skewX(-6deg)',
               zIndex: 15,
-              backgroundColor: COLORS.P5R_RED,
-              color: COLORS.WHITE,
-              padding: '8px 24px',
-              fontFamily: 'monospace',
-              fontSize: '12px',
-              border: `2px solid ${COLORS.WHITE}`,
-              boxShadow: `6px 6px 0px ${COLORS.BLACK}`,
+              backgroundColor: COLORS.ANARCHY_RED,
+              color: COLORS.PAPER,
+              padding: '8px 28px',
+              fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+              fontStyle: 'italic',
+              fontWeight: '900',
+              fontSize: '13px',
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              border: `3px solid ${COLORS.PAPER}`,
+              boxShadow: `8px 8px 0px ${COLORS.BLACK}`,
               display: 'flex',
               gap: '14px',
               alignItems: 'center',
             }}>
-              <span style={{ letterSpacing: '1px' }}>!! {error}</span>
+              <span style={{ transform: 'skewX(6deg)', display: 'inline-block' }}>!! {error}</span>
               <button onClick={() => {
                 clearError();
                 refreshLocalService();
               }} style={{
-                background: COLORS.WHITE,
+                background: COLORS.PAPER,
                 color: COLORS.BLACK,
                 border: 'none',
-                padding: '3px 10px',
-                fontFamily: 'monospace',
-                fontSize: '10px',
+                padding: '4px 12px',
+                fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+                fontStyle: 'italic',
+                fontWeight: '900',
+                fontSize: '11px',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
                 cursor: 'pointer',
-                fontWeight: 'bold',
+                transform: 'skewX(6deg)',
               }}>
-                RETRY
+                <span style={{ display: 'inline-block', transform: 'skewX(-6deg)' }}>RETRY</span>
               </button>
             </div>
           )}
@@ -196,45 +299,127 @@ function App() {
           {isStreaming && (
             <div style={{
               position: 'absolute',
-              top: '55px',
-              right: '30px',
+              top: '60px',
+              right: '32px',
               zIndex: 15,
               color: '#FFD700',
-              fontFamily: 'monospace',
-              fontSize: '11px',
+              fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+              fontStyle: 'italic',
+              fontWeight: '900',
+              fontSize: '12px',
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              padding: '4px 12px',
-              border: '1px solid #FFD700',
+              gap: '10px',
+              backgroundColor: 'rgba(0,0,0,0.75)',
+              padding: '6px 14px',
+              border: `2px solid #FFD700`,
+              boxShadow: `4px 4px 0px ${COLORS.BLACK}`,
+              transform: 'skewX(-6deg)',
             }}>
               <span style={{
                 display: 'inline-block',
-                width: '5px',
-                height: '5px',
+                width: '6px',
+                height: '6px',
                 backgroundColor: '#FFD700',
                 animation: 'blink 0.5s infinite',
+                transform: 'skewX(6deg)',
               }} />
-              RX STREAM
+              <span style={{ transform: 'skewX(6deg)', display: 'inline-block' }}>RX STREAM</span>
               <button onClick={cancelStreaming} style={{
                 background: 'none',
-                border: '1px solid #FFD700',
+                border: `2px solid #FFD700`,
                 color: '#FFD700',
-                padding: '1px 6px',
-                fontFamily: 'monospace',
-                fontSize: '9px',
+                padding: '2px 10px',
+                fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+                fontStyle: 'italic',
+                fontWeight: '900',
+                fontSize: '10px',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
                 cursor: 'pointer',
+                transform: 'skewX(6deg)',
               }}>
-                ABORT
+                <span style={{ display: 'inline-block', transform: 'skewX(-6deg)' }}>ABORT</span>
               </button>
+            </div>
+          )}
+
+          {/* WAR ROOM 多人头像条 */}
+          {isWarRoom && sortedWarRoomPersonas.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '55px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 12,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0px',
+            }}>
+              {sortedWarRoomPersonas.map((p, i) => {
+                const yOffset = (i % 3 - 1) * 5; // -5, 0, 5 错落
+                const isSpeaker = warRoomSpeaker?.id === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setWarRoomSpeakerId(p.id)}
+                    aria-pressed={isSpeaker}
+                    title={`由 ${p.name} 回复`}
+                    style={{
+                    width: '44px',
+                    height: '44px',
+                    padding: 0,
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                    transform: `skewX(-8deg) translateY(${yOffset}px) scale(${isSpeaker ? 1.18 : 1})`,
+                    boxShadow: isSpeaker
+                      ? `6px 6px 0px ${COLORS.PAPER}`
+                      : `4px 4px 0px ${COLORS.BLACK}`,
+                    border: `${isSpeaker ? 3 : 2}px solid ${p.color || COLORS.PAPER}`,
+                    background: COLORS.BLACK,
+                    cursor: 'pointer',
+                    transition: 'transform 0.15s, box-shadow 0.15s',
+                  }}>
+                    {p.avatarUrl ? (
+                      <img
+                        src={p.avatarUrl}
+                        alt={p.name}
+                        style={{
+                          width: '100%', height: '100%', objectFit: 'cover',
+                          transform: 'skewX(8deg) scale(1.15)',
+                        }}
+                      />
+                    ) : (
+                      <span style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: '100%', height: '100%',
+                        fontSize: '20px',
+                        transform: 'skewX(8deg)',
+                      }}>{p.emoji || '◆'}</span>
+                    )}
+                  </button>
+                );
+              })}
+              <span style={{
+                marginLeft: '14px',
+                color: COLORS.PAPER,
+                fontFamily: 'monospace',
+                fontSize: '10px',
+                letterSpacing: '1px',
+                whiteSpace: 'nowrap',
+              }}>
+                SPEAKER: {(warRoomSpeaker?.name || '...').toUpperCase()}
+              </span>
             </div>
           )}
 
           {/* 中央对话视窗 */}
           <div style={{
             position: 'absolute',
-            top: '55px',
+            top: isWarRoom ? '110px' : '55px',
             bottom: '0',
             left: '0',
             right: '0',
@@ -246,10 +431,27 @@ function App() {
               chatHistory={chatHistory}
               isStreaming={isStreaming}
               activePersona={activePersona}
+              personas={personas}
+              userProfile={userProfile}
             />
             <UserInputPanel
-              isStreaming={isStreaming || isLoadingHistory}
-              onSendMessage={sendMessage}
+              isStreaming={
+                isStreaming
+                || isLoadingHistory
+                || (isWarRoom && !seminar?.id)
+              }
+              placeholder={
+                isWarRoom && warRoomSpeaker
+                  ? `向 ${warRoomSpeaker.name} 发言...`
+                  : undefined
+              }
+              onSendMessage={(text) => {
+                if (isWarRoom) {
+                  sendSeminarMessage(text, warRoomSpeakerId);
+                } else {
+                  sendMessage(text);
+                }
+              }}
             />
           </div>
         </>
@@ -257,6 +459,14 @@ function App() {
 
       {/* ============ 全局关键帧动画 ============ */}
       <style>{`
+        @keyframes fadeInLeftFlat {
+          from { opacity: 0; transform: translateX(-30px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeInRightFlat {
+          from { opacity: 0; transform: translateX(30px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
         @keyframes fadeInLeft {
           from { opacity: 0; transform: skewX(-15deg) translateX(-30px); }
           to   { opacity: 1; transform: skewX(-15deg) translateX(0); }

@@ -4,25 +4,71 @@ import { COLORS } from '../config/constants';
 /* ==========================================================================
    统一时间轴聊天流 (ChatTimeline)
    按时间顺序从上到下交错排列 AI 与用户消息。
-   - AI 消息: 靠左对齐，左侧 60×60 斜切黑框头像槽，气泡 skewX(-15°)，尖角指向左
-   - 用户消息: 靠右对齐，右侧 60×60 斜切白框头像槽，气泡 skewX(15°)，尖角指向右
+   - AI 消息: 靠左对齐，左侧 60×60 斜切黑框头像槽，气泡竖直矩形，
+     底层叠放 15° 斜切纯黑+暖白几何色块（拼贴画风格）
+   - 用户消息: 靠右对齐，右侧 60×60 斜切白框头像槽，气泡竖直矩形，
+     底层叠放 15° 斜切纯黑+安那其红几何色块
    ========================================================================== */
 
+const { PAPER, ANARCHY_RED } = COLORS;
+
+/* ================================================================
+   15° 斜切装饰色块背景层 (Background Decoration Layer)
+   利用 clip-path 创建两枚互相错落的倾斜几何色块，
+   叠放在气泡底部，营造 P5R "背景狂乱倾斜、文字四平八稳" 的拼贴画视觉
+   ================================================================ */
+const SkewedDecorBlocks = ({ isAi }) => {
+  const blockAColor = '#000000';
+  const blockBColor = isAi ? PAPER : ANARCHY_RED;
+  const blockAOpacity = isAi ? 0.22 : 0.12;
+  const blockBOpacity = isAi ? 0.10 : 0.10;
+
+  return (
+    <div style={{
+      position: 'absolute',
+      inset: 0,
+      overflow: 'hidden',
+      zIndex: 0,
+      pointerEvents: 'none',
+    }}>
+      {/* 色块 A — 向右 15° 斜切 */}
+      <div style={{
+        position: 'absolute',
+        top: '-15%',
+        left: '-12%',
+        width: '72%',
+        height: '135%',
+        backgroundColor: blockAColor,
+        clipPath: 'polygon(0 8%, 92% 0, 100% 92%, 8% 100%)',
+        opacity: blockAOpacity,
+      }} />
+      {/* 色块 B — 向左 15° 斜切，与 A 错位叠放 */}
+      <div style={{
+        position: 'absolute',
+        top: '12%',
+        right: '-10%',
+        width: '58%',
+        height: '125%',
+        backgroundColor: blockBColor,
+        clipPath: 'polygon(12% 0, 100% 6%, 90% 100%, 0 94%)',
+        opacity: blockBOpacity,
+      }} />
+    </div>
+  );
+};
+
 /** 单条消息气泡 + 头像槽 */
-const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
+const MessageRow = ({ msg, index, isLastStreaming, messagePersona, userProfile }) => {
   const isAi = msg.sender === 'ai';
   const isError = msg.isError;
 
-  // 根据消息发送者决定对齐方向与斜切角度
-  const justifyContent = isAi ? 'flex-start' : 'flex-end';
-  const skewAngle = isAi ? '-15deg' : '15deg';
-  const animName = isAi ? 'fadeInLeft' : 'fadeInRight';
+  // 根据消息发送者决定动画方向
+  const animName = isAi ? 'fadeInLeftFlat' : 'fadeInRightFlat';
 
   // --- 气泡样式 ---
   const bubbleBg = isAi
     ? (isError ? 'rgba(211,47,47,0.2)' : COLORS.BLACK_OVERLAY)
     : COLORS.WHITE;
-  const bubbleTextColor = isAi ? COLORS.WHITE : COLORS.BLACK;
   const bubbleBorderColor = isAi
     ? (isError ? COLORS.P5R_RED : (isLastStreaming ? '#FFD700' : COLORS.WHITE))
     : COLORS.ANARCHY_RED;
@@ -41,59 +87,38 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
   const avatarBorder = isAi
     ? `2px solid ${bubbleBorderColor}`
     : `2px solid ${COLORS.ANARCHY_RED}`;
-  const avatarContent = isAi ? (activePersona?.emoji || '⚓') : 'YOU';
+  const avatarContent = isAi ? (messagePersona?.emoji || '⚓') : 'YOU';
   const avatarContentColor = isAi ? bubbleBorderColor : COLORS.ANARCHY_RED;
-  const photoUrl = isAi ? activePersona?.avatarUrl : null;
-
-  // --- 气泡尖角 (CSS border triangle) ---
-  const tailSize = 10;
-  const tailStyle = isAi
-    ? {
-        /* AI 气泡尖角指向左侧（朝向头像） */
-        position: 'absolute',
-        left: `-${tailSize}px`,
-        top: '32px',                    /* 与上内边距对齐 */
-        width: 0,
-        height: 0,
-        borderTop: `${tailSize}px solid transparent`,
-        borderBottom: `${tailSize}px solid transparent`,
-        borderRight: `${tailSize}px solid ${bubbleBorderColor}`,
-      }
-    : {
-        /* 用户气泡尖角指向右侧（朝向头像） */
-        position: 'absolute',
-        right: `-${tailSize}px`,
-        top: '32px',
-        width: 0,
-        height: 0,
-        borderTop: `${tailSize}px solid transparent`,
-        borderBottom: `${tailSize}px solid transparent`,
-        borderLeft: `${tailSize}px solid ${bubbleBorderColor}`,
-      };
+  const photoUrl = isAi ? messagePersona?.avatarUrl : userProfile?.avatarUrl;
 
   /* ---- 气泡内容片段 ---- */
   const bubbleContent = (
     <>
-      {/* 气泡尖角三角形 */}
-      <div style={tailStyle} />
-
-      {/* 标题行 */}
+      {/* 标题行 — 继承气泡斜度，无 counter-skew */}
       <div style={{
-        fontFamily: 'monospace',
-        fontSize: '11px',
-        letterSpacing: '1.5px',
+        fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+        fontSize: '14px',
+        fontStyle: 'italic',
+        fontWeight: '900',
+        letterSpacing: '2px',
+        textTransform: 'uppercase',
         color: headerColor,
-        marginBottom: '6px',
-        fontWeight: 'bold',
+        marginBottom: '8px',
+        textShadow: isAi
+          ? 'none'
+          : `2px 2px 0px ${COLORS.ANARCHY_RED}20`,
       }}>
-        {isAi ? (activePersona?.name || 'THESEUS').toUpperCase() : 'COMMAND'} // {headerLabel}
+        {isAi ? (messagePersona?.name || 'THESEUS').toUpperCase() : 'COMMAND'} // {headerLabel}
       </div>
 
-      {/* 正文 — 与气泡共享同一 skewX，自然匹配平行四边形 */}
+      {/* 正文 — 继承气泡斜度，与边框同坐标系 */}
       <p style={{
         margin: 0,
-        fontSize: '16px',
-        lineHeight: '1.6',
+        fontFamily: '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif',
+        fontSize: '18px',
+        fontStyle: 'italic',
+        fontWeight: '900',
+        lineHeight: '1.5',
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
       }}>
@@ -105,23 +130,33 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
     </>
   );
 
-  /* ---- 消息气泡：整体斜切，文字与边框共享同一坐标系 ---- */
+  /* ================================================================
+     消息气泡：全元素统一斜切
+     - 单层结构，skewX 作用于边框 + 文字 + 色块装饰
+     - 文字与边框共享同一坐标系，无边角溢出
+     ================================================================ */
+  const skewAngle = isAi ? '-15deg' : '15deg';
+
   const bubbleBox = (
     <div style={{
       position: 'relative',
-      maxWidth: isAi ? 'min(720px, 68%)' : 'min(560px, 58%)',
+      maxWidth: isAi ? '720px' : '560px',
       minWidth: 0,
       flexShrink: 1,
-      padding: '24px 40px',
-      backgroundColor: bubbleBg,
-      color: bubbleTextColor,
-      border: `3px solid ${bubbleBorderColor}`,
       transform: `skewX(${skewAngle})`,
+      backgroundColor: bubbleBg,
+      color: isAi ? COLORS.WHITE : COLORS.BLACK,
+      border: `3px solid ${bubbleBorderColor}`,
       boxShadow: `8px 8px 0px ${shadowColor}`,
+      padding: '32px 56px',
       animation: `${animName} 0.35s ease-out forwards`,
-      fontFamily: 'sans-serif',
     }}>
-      {bubbleContent}
+      {/* 底层：15° 斜切几何色块装饰 */}
+      <SkewedDecorBlocks isAi={isAi} />
+
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {bubbleContent}
+      </div>
     </div>
   );
 
@@ -135,7 +170,7 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
       alignSelf: 'flex-start',
       backgroundColor: avatarBg,
       border: avatarBorder,
-      transform: isAi ? 'skewX(-12deg)' : 'skewX(12deg)',
+      transform: isAi ? 'skewX(-8deg)' : 'skewX(8deg)',
       boxShadow: isAi
         ? `4px 4px 0px ${COLORS.BLACK}`
         : `4px 4px 0px ${COLORS.ANARCHY_RED}`,
@@ -144,18 +179,18 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
       justifyContent: 'center',
       overflow: 'hidden',
     }}>
-      {isAi && photoUrl ? (
+      {photoUrl ? (
         <img
           src={photoUrl}
-          alt={activePersona?.name || 'AI'}
+          alt={isAi ? (messagePersona?.name || 'AI') : 'User'}
           style={{
             width: '100%', height: '100%', objectFit: 'cover',
-            transform: 'skewX(12deg)',
+            transform: isAi ? 'skewX(8deg)' : 'skewX(-8deg)',
           }}
         />
       ) : (
         <span style={{
-          transform: isAi ? 'skewX(12deg)' : 'skewX(-12deg)',
+          transform: isAi ? 'skewX(8deg)' : 'skewX(-8deg)',
           fontSize: isAi ? '22px' : '18px',
           fontWeight: 'bold',
           fontFamily: 'monospace',
@@ -177,7 +212,7 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
   return (
     <div style={{
       display: 'flex',
-      justifyContent,                   /* AI: flex-start / 用户: flex-end */
+      justifyContent: 'flex-start',     /* 统一从左侧开始排列 */
       alignItems: 'flex-start',
       width: '100%',                    /* ★ 占满父容器宽度，建立弹性基准 */
       padding: '4px 0',
@@ -186,17 +221,18 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
       {isAi ? (
         /* ---- AI 靠左: 头像 + 气泡 直接排列 ---- */
         <>
-          {avatarSlot}
+          <div style={{ marginRight: '24px' }}>{avatarSlot}</div>
           {bubbleBox}
         </>
       ) : (
-        /* ---- 用户靠右: 内层 flex 包裹 (气泡 + 头像)，防御性对齐 ---- */
+        /* ---- 用户靠右: margin-left: auto 推至最右侧 ---- */
         <div style={{
           display: 'flex',
           alignItems: 'flex-start',
-          gap: '16px',
+          gap: '24px',
           maxWidth: '100%',
-          minWidth: 0,               /* 允许在窄屏时收缩 */
+          minWidth: 0,
+          marginLeft: 'auto',
         }}>
           {bubbleBox}
           {avatarSlot}
@@ -209,7 +245,12 @@ const MessageRow = ({ msg, index, isLastStreaming, activePersona }) => {
 /* ==========================================================================
    主组件: 统一时间轴聊天流
    ========================================================================== */
-export const AiDialogueStream = ({ chatHistory, activePersona }) => {
+export const AiDialogueStream = ({
+  chatHistory,
+  activePersona,
+  personas = [],
+  userProfile,
+}) => {
   const scrollRef = useRef(null);
   const prevLengthRef = useRef(0);
 
@@ -246,6 +287,9 @@ export const AiDialogueStream = ({ chatHistory, activePersona }) => {
     >
       {/* ======== 按时间顺序渲染所有消息（AI + 用户混合） ======== */}
       {chatHistory.map((msg, i) => {
+        const messagePersona = msg.sender === 'ai'
+          ? (personas.find(persona => persona.id === msg.personaId) || activePersona)
+          : null;
         /* 判断当前消息是否是最后一条 AI 消息且正在流式传输 */
         const isLastAi =
           msg.sender === 'ai' &&
@@ -263,7 +307,8 @@ export const AiDialogueStream = ({ chatHistory, activePersona }) => {
                 .filter((m) => m.sender === msg.sender).length
             }
             isLastStreaming={isLastStreaming}
-            activePersona={activePersona}
+            messagePersona={messagePersona}
+            userProfile={userProfile}
           />
         );
       })}

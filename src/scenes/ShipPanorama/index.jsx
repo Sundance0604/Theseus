@@ -16,8 +16,10 @@ const ZONE_DEFS = {
 export const ShipPanorama = ({
   personas,
   onNavigateToDialogue,
+  onNavigateToWarRoom,
+  initialPhase,
 }) => {
-  const [phase, setPhase] = useState('idle');
+  const [phase, setPhase] = useState(initialPhase || 'idle');
   const [enteredZone, setEnteredZone] = useState(null);
 
   // 点击左侧导航按钮 → 进入对应子场景
@@ -42,6 +44,16 @@ export const ShipPanorama = ({
     }, 1200);
   }, [onNavigateToDialogue]);
 
+  const handleConfirmWarRoom = useCallback((selectedIds) => {
+    // WAR ROOM 多选确认 → 跳转到多人对话
+    setEnteredZone(null);
+    setPhase('zooming');
+    setTimeout(() => {
+      setPhase('launched');
+      if (onNavigateToWarRoom) onNavigateToWarRoom(selectedIds);
+    }, 1200);
+  }, [onNavigateToWarRoom]);
+
   return (
     <div style={{
       position: 'relative',
@@ -62,6 +74,7 @@ export const ShipPanorama = ({
           personas={personas}
           onBack={handleBackFromZone}
           onEnterDialogue={handleEnterDialogue}
+          onConfirmWarRoom={handleConfirmWarRoom}
         />
       )}
     </div>

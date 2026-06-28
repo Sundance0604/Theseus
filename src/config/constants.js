@@ -10,6 +10,8 @@ export const COLORS = {
   ANARCHY_BLACK: '#1A1A1A',
   /** P5R 红 (用于强调) */
   P5R_RED: '#D32F2F',
+  /** 暖白纸色 — P5R 拼贴画背景 */
+  PAPER: '#F5F0EB',
   /** 纯白 */
   WHITE: '#FFFFFF',
   /** 纯黑 */
