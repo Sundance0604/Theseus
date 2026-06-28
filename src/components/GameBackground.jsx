@@ -77,8 +77,6 @@ export const GameBackground = ({ partReplacement, activeColor = '#D32F2F' }) => 
         left: 0,
         width: '100%',
         height: '100%',
-        minWidth: '100vw',
-        minHeight: '100vh',
         zIndex: 1,
         overflow: 'hidden',
       }}
