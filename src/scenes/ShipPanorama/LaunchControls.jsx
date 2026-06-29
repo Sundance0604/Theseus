@@ -39,29 +39,16 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
   const isLaunched = phase === 'launched';
 
   return (
-    <div style={{
-      position: 'absolute',
-      right: isLaunched ? '24px' : '36px',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      zIndex: 20,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: isLaunched ? '1px' : '22px',
-      alignItems: 'flex-end',
-      transition: 'all 0.5s ease',
-      width: isLaunched ? '280px' : 'auto',
-    }}>
-      {/* ======== 标题区 (仅 idle/zooming) — 不可点击，保持在左侧 ======== */}
-      {!isLaunched && (
-        <div style={{
-          position: 'fixed',
-          left: '36px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          marginBottom: '10px',
-          pointerEvents: 'none',
-        }}>
+    <>
+      {/* ======== 标题区 — 始终显示在视口左侧 ======== */}
+      <div style={{
+        position: 'absolute',
+        left: '36px',
+        top: '35%',
+        transform: 'translateY(-50%)',
+        pointerEvents: 'none',
+        zIndex: 21,
+      }}>
           <h2 style={{
             margin: 0, color: PAPER,
             fontFamily: FONT, fontStyle: 'italic',
@@ -78,10 +65,44 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
             textShadow: `8px 8px 0px ${BLACK}`,
             lineHeight: 1.0, marginTop: '-4px',
           }}>THESEUS</h2>
-        </div>
-      )}
 
-      {/* ======== 已启动标题标签 ======== */}
+          {/* 分割线 — 始终显示 */}
+          <div style={{ width: '100%', height: '5px', backgroundColor: ANARCHY, margin: '12px 0 6px', boxShadow: `4px 4px 0px ${BLACK}` }} />
+
+          {/* idle: AWAITING / launched: MADE BY SUNDANCE */}
+          {!isLaunched ? (
+            <div style={{
+              fontFamily: FONT, fontStyle: 'italic',
+              fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase',
+              color: '#888',
+            }}>
+              · AWAITING ·
+            </div>
+          ) : (
+            <div style={{
+              fontFamily: FONT, fontStyle: 'italic',
+              fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase',
+              color: '#888',
+            }}>
+              MADE BY SUNDANCE
+            </div>
+          )}
+        </div>
+
+      {/* ======== 右侧控件面板 ======== */}
+      <div style={{
+        position: 'absolute',
+        right: isLaunched ? '24px' : '36px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        zIndex: 20,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: isLaunched ? '1px' : '22px',
+        alignItems: 'flex-end',
+        transition: 'all 0.5s ease',
+        width: isLaunched ? '280px' : 'auto',
+      }}>
       {isLaunched && (
         <div style={{
           position: 'relative', marginBottom: '6px',
@@ -99,22 +120,18 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
         </div>
       )}
 
-      {/* ======== 分割线 ======== */}
-      {!isLaunched && (
-        <div style={{ width: '100%', height: '5px', backgroundColor: ANARCHY, margin: '6px 0', boxShadow: `4px 4px 0px ${BLACK}` }} />
+      {/* ======== ENGAGING / ACTIVE 状态 ======== */}
+      {(isZooming || isLaunched) && (
+        <div style={{
+          fontFamily: FONT, fontStyle: 'italic',
+          fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase',
+          color: isLaunched ? '#00E676' : '#FFD700',
+          marginBottom: isLaunched ? '4px' : '0',
+        }}>
+          {isZooming && '· ENGAGING ·'}
+          {isLaunched && '· ACTIVE ·'}
+        </div>
       )}
-
-      {/* ======== 状态文字 ======== */}
-      <div style={{
-        fontFamily: FONT, fontStyle: 'italic',
-        fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase',
-        color: isLaunched ? '#00E676' : (isZooming ? '#FFD700' : '#888'),
-        marginBottom: isLaunched ? '4px' : '0',
-      }}>
-        {isIdle && '· AWAITING ·'}
-        {isZooming && '· ENGAGING ·'}
-        {isLaunched && '· ACTIVE ·'}
-      </div>
 
       {/* ======== "开始航行" 按钮 ======== */}
       {!isLaunched && (
@@ -143,14 +160,6 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
             el.style.borderColor = ANARCHY;
             el.style.boxShadow = `16px 16px 0px ${ANARCHY}`;
             el.style.animation = 'p5r-shake 0.15s infinite linear';
-          }}
-          onMouseLeave={(e) => {
-            if (!isIdle) return;
-            const el = e.currentTarget;
-            el.style.backgroundColor = ANARCHY;
-            el.style.color = PAPER;
-            el.style.borderColor = PAPER;
-            el.style.boxShadow = `14px 14px 0px ${BLACK}`;
           }}
           onMouseLeave={(e) => {
             if (!isIdle) return;
@@ -245,5 +254,6 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
         }
       `}</style>
     </div>
+    </>
   );
 };
