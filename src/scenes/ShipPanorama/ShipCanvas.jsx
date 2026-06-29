@@ -55,19 +55,21 @@ export const ShipCanvas = ({ phase, onShipReady }) => {
       app.stage.addChild(squareBg);
 
       // ================================================================
-      // 3. 虚空舰 — 叠在方形背景正中央，缩放至完全位于背景内
+      // 3. 虚空舰 — ship 右上角位于背景中心 (定位关系)
       // ================================================================
       const shipContainer = new PIXI.Container();
       const ship = new PIXI.Sprite(shipTex);
       ship.anchor.set(0.5);
-      // 缩放: 虚空舰约占方形背景内切圆直径的 65%（确保旋转时也完全在内）
+      // 缩放: 虚空舰约占方形背景内切圆直径的 65%
       const shipMaxSize = bgSize * 0.75;
       const shipBaseScale = shipMaxSize / Math.max(ship.texture.width, ship.texture.height);
       ship.scale.set(shipBaseScale);
       shipContainer.addChild(ship);
-      // 与方形背景同一中心
-      shipContainer.x = app.screen.width * 0.5;
-      shipContainer.y = app.screen.height * 0.5;
+      // ship 右上角 = background 中心
+      const shipW = ship.texture.width * shipBaseScale;
+      const shipH = ship.texture.height * shipBaseScale;
+      shipContainer.x = app.screen.width * 0.5 - shipW / 2;
+      shipContainer.y = app.screen.height * 0.5 + shipH / 2;
       app.stage.addChild(shipContainer);
 
       // ================================================================

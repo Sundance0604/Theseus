@@ -12,12 +12,12 @@ const BLACK = '#1A1A1A';
 const FONT = '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif';
 
 const ZONES = [
-  { id: 'crew',       label: 'CREW',        sub: 'QUARTERS',      icon: '👥' },
-  { id: 'warRoom',    label: 'WAR',         sub: 'ROOM',          icon: '🏛️' },
-  { id: 'captain',    label: 'CAPTAIN',     sub: 'CABIN',         icon: '⚓' },
-  { id: 'engine',     label: 'ENGINE',      sub: 'ROOM',          icon: '⚙️' },
-  { id: 'archive',    label: 'ARCHIVE',     sub: 'LOG',           icon: '📜' },
-  { id: 'memoryWard', label: 'MEMORY',      sub: 'WARD',          icon: '🧠' },
+  { id: 'crew',       label: 'CREW',        sub: 'QUARTERS' },
+  { id: 'warRoom',    label: 'WAR',         sub: 'ROOM' },
+  { id: 'captain',    label: 'CAPTAIN',     sub: 'CABIN' },
+  { id: 'engine',     label: 'ENGINE',      sub: 'ROOM' },
+  { id: 'archive',    label: 'ARCHIVE',     sub: 'LOG' },
+  { id: 'memoryWard', label: 'MEMORY',      sub: 'WARD' },
 ];
 
 /* ---- P5R 颤抖关键帧 ---- */
@@ -41,20 +41,27 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
   return (
     <div style={{
       position: 'absolute',
-      left: isLaunched ? '24px' : '36px',
+      right: isLaunched ? '24px' : '36px',
       top: '50%',
       transform: 'translateY(-50%)',
       zIndex: 20,
       display: 'flex',
       flexDirection: 'column',
       gap: isLaunched ? '1px' : '22px',
-      alignItems: 'flex-start',
+      alignItems: 'flex-end',
       transition: 'all 0.5s ease',
       width: isLaunched ? '280px' : 'auto',
     }}>
-      {/* ======== 标题区 (仅 idle/zooming) ======== */}
+      {/* ======== 标题区 (仅 idle/zooming) — 不可点击，保持在左侧 ======== */}
       {!isLaunched && (
-        <div style={{ marginBottom: '10px' }}>
+        <div style={{
+          position: 'fixed',
+          left: '36px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          marginBottom: '10px',
+          pointerEvents: 'none',
+        }}>
           <h2 style={{
             margin: 0, color: PAPER,
             fontFamily: FONT, fontStyle: 'italic',
@@ -79,12 +86,12 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
         <div style={{
           position: 'relative', marginBottom: '6px',
           backgroundColor: BLACK, border: `3px solid ${ANARCHY}`,
-          transform: 'skewX(-12deg)',
-          padding: '8px 24px', alignSelf: 'flex-start',
+          transform: 'skewX(12deg)',
+          padding: '8px 24px', alignSelf: 'flex-end',
           boxShadow: `8px 8px 0px ${BLACK}`,
         }}>
           <span style={{
-            display: 'inline-block', transform: 'skewX(12deg)',
+            display: 'inline-block', transform: 'skewX(-12deg)',
             fontFamily: FONT, fontStyle: 'italic',
             fontSize: '18px', fontWeight: '900',
             color: PAPER, letterSpacing: '-0.5px', textTransform: 'uppercase',
@@ -123,7 +130,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
             backgroundColor: isIdle ? ANARCHY : '#222',
             border: `4px solid ${isIdle ? PAPER : '#444'}`, outline: 'none',
             cursor: isIdle ? 'pointer' : 'not-allowed',
-            transform: 'skewX(-10deg)',
+            transform: 'skewX(10deg)',
             boxShadow: isIdle ? `14px 14px 0px ${BLACK}` : 'none',
             transition: 'transform 0.18s cubic-bezier(0.25, 1.5, 0.5, 1), background-color 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s',
             whiteSpace: 'nowrap',
@@ -144,10 +151,18 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
             el.style.color = PAPER;
             el.style.borderColor = PAPER;
             el.style.boxShadow = `14px 14px 0px ${BLACK}`;
+          }}
+          onMouseLeave={(e) => {
+            if (!isIdle) return;
+            const el = e.currentTarget;
+            el.style.backgroundColor = ANARCHY;
+            el.style.color = PAPER;
+            el.style.borderColor = PAPER;
+            el.style.boxShadow = `14px 14px 0px ${BLACK}`;
             el.style.animation = '';
           }}
         >
-          <span style={{ display: 'inline-block', transform: 'skewX(10deg)' }}>
+          <span style={{ display: 'inline-block', transform: 'skewX(-10deg)' }}>
             {isIdle ? '▶ SET SAIL' : isZooming ? '···' : 'SAILING'}
           </span>
         </button>
@@ -167,7 +182,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
                 backgroundColor: BLACK,
                 border: `2px solid ${PAPER}`, borderLeft: `6px solid ${PAPER}`,
                 outline: 'none', cursor: 'pointer', textAlign: 'left',
-                transform: 'skewX(-10deg)',
+                transform: 'skewX(10deg)',
                 transition: 'transform 0.18s cubic-bezier(0.25, 1.5, 0.5, 1), background-color 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s',
                 boxShadow: `6px 6px 0px ${BLACK}`,
                 animation: `navFadeIn 0.25s ${i * 0.05}s ease-out both`,
@@ -193,12 +208,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
                 el.querySelectorAll('[data-og]').forEach(s => { s.style.color = s.dataset.og; });
               }}
             >
-              <span data-og={PAPER}
-                style={{ fontSize: '20px', transform: 'skewX(10deg)', flexShrink: 0, color: PAPER, transition: 'color 0.12s' }}>
-                {zone.icon}
-              </span>
-
-              <div style={{ transform: 'skewX(10deg)', flex: 1, minWidth: 0 }}>
+              <div style={{ transform: 'skewX(-10deg)', flex: 1, minWidth: 0 }}>
                 <div data-og={PAPER}
                   style={{
                     fontFamily: FONT, fontStyle: 'italic',
@@ -219,7 +229,7 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
               </div>
 
               <span data-og={PAPER}
-                style={{ color: PAPER, fontSize: '18px', transform: 'skewX(10deg)', flexShrink: 0, opacity: 0.6, transition: 'color 0.12s' }}>
+                style={{ color: PAPER, fontSize: '18px', transform: 'skewX(-10deg)', flexShrink: 0, opacity: 0.6, transition: 'color 0.12s' }}>
                 ▶
               </span>
             </button>
@@ -230,8 +240,8 @@ export const LaunchControls = ({ phase, onLaunch, onNavigateZone }) => {
       <style>{`
         ${SHAKE_KEYFRAMES}
         @keyframes navFadeIn {
-          from { opacity: 0; transform: skewX(-10deg) translateX(-20px); }
-          to { opacity: 1; transform: skewX(-10deg) translateX(0); }
+          from { opacity: 0; transform: skewX(10deg) translateX(20px); }
+          to { opacity: 1; transform: skewX(10deg) translateX(0); }
         }
       `}</style>
     </div>
