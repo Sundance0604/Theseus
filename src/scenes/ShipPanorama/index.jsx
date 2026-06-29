@@ -17,6 +17,7 @@ export const ShipPanorama = ({
   personas,
   onNavigateToDialogue,
   onNavigateToWarRoom,
+  onNavigateToEngineRoom,
   initialPhase,
 }) => {
   const [phase, setPhase] = useState(initialPhase || 'idle');
@@ -75,6 +76,7 @@ export const ShipPanorama = ({
           onBack={handleBackFromZone}
           onEnterDialogue={handleEnterDialogue}
           onConfirmWarRoom={handleConfirmWarRoom}
+          onNavigateToEngineRoom={onNavigateToEngineRoom}
         />
       )}
     </div>

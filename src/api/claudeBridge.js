@@ -301,3 +301,15 @@ export async function checkBridgeHealth() {
     return null;
   }
 }
+
+/**
+ * 获取引擎室统计数据
+ * @returns {Promise<{startups: number, projectSessions: Object, projectMessages: Object, totalUserMessages: number}>}
+ */
+export async function getEngineRoomStats() {
+  const response = await fetch(`${BRIDGE_URL}/api/engine-room/stats`);
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
+}

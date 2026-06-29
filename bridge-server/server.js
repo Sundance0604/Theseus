@@ -16,10 +16,13 @@ import {
   readdirSync,
   readFileSync,
   renameSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HOST = process.env.THESEUS_HOST || '127.0.0.1';
@@ -1194,6 +1197,121 @@ async function handleRequest(req, res) {
     saveTranscript(transcript);
     sseWrite(res, 'done', { fullText: result.text });
     res.end();
+    return;
+  }
+
+  // ---- 引擎室统计端点 ----
+  if (req.method === 'GET' && url.pathname === '/api/engine-room/stats') {
+    const CLAUDE_JSON = 'C:\\Users\\86198\\.claude.json';
+    const PROJECTS_DIR = 'C:\\Users\\86198\\.claude\\projects';
+
+    let startups = 0;
+    const projectSessions = {};
+    const projectMessages = {};
+    let totalUserMessages = 0;
+
+    // 1. numStartups
+    try {
+      if (existsSync(CLAUDE_JSON)) {
+        startups = JSON.parse(readFileSync(CLAUDE_JSON, 'utf8')).numStartups || 0;
+      }
+    } catch { /* ignore */ }
+
+    // 2. 每个项目的会话数量
+    try {
+      if (existsSync(PROJECTS_DIR)) {
+        for (const entry of readdirSync(PROJECTS_DIR, { withFileTypes: true })) {
+          if (!entry.isDirectory()) continue;
+          const slug = entry.name;
+          const dir = path.join(PROJECTS_DIR, slug);
+          try {
+            projectSessions[slug] = readdirSync(dir).filter(f => f.endsWith('.jsonl')).length;
+          } catch { projectSessions[slug] = 0; }
+        }
+      }
+    } catch { /* ignore */ }
+
+    // 3. 用户消息总数（Python 解析 repr 格式的 message 字段）
+    // 写临时 .py 文件避免命令行引号转义问题
+    const tmpPy = path.join(os.tmpdir(), `theseus_engine_${process.pid}.py`);
+    writeFileSync(tmpPy, [
+      'import json, os, glob, ast',
+      `dirpath = ${JSON.stringify(PROJECTS_DIR)}`,
+      'total = 0',
+      'by_project = {}',
+      'if os.path.isdir(dirpath):',
+      '    for f in glob.glob(os.path.join(dirpath, "*", "*.jsonl")):',
+      '        slug = os.path.basename(os.path.dirname(f))',
+      '        count = 0',
+      '        try:',
+      '            with open(f, encoding="utf-8") as fh:',
+      '                for line in fh:',
+      '                    try:',
+      '                        d = json.loads(line.strip())',
+      '                        if d.get("type") == "user":',
+      '                            msg = d.get("message", {})',
+      '                            if isinstance(msg, str):',
+      '                                msg = ast.literal_eval(msg)',
+      '                            if isinstance(msg, dict) and msg.get("role") == "user":',
+      '                                total += 1',
+      '                                count += 1',
+      '                    except Exception:',
+      '                        pass',
+      '        except Exception:',
+      '            pass',
+      '        by_project[slug] = count',
+      'print(json.dumps({"total": total, "by_project": by_project}))',
+    ].join('\n'), 'utf8');
+
+    try {
+      const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+      const raw = execSync(`"${pythonCmd}" "${tmpPy}"`, {
+        encoding: 'utf-8',
+        timeout: 15_000,
+        windowsHide: true,
+      });
+      const result = JSON.parse(raw.trim());
+      totalUserMessages = result.total || 0;
+      Object.assign(projectMessages, result.by_project || {});
+    } finally {
+      try { unlinkSync(tmpPy); } catch { /* ignore */ }
+    }
+
+    // Python 不可用时回退到 Node.js 暴力解析
+    if (totalUserMessages === 0) {
+      try {
+        if (existsSync(PROJECTS_DIR)) {
+          for (const entry of readdirSync(PROJECTS_DIR, { withFileTypes: true })) {
+            if (!entry.isDirectory()) continue;
+            const slug = entry.name;
+            const dir = path.join(PROJECTS_DIR, slug);
+            let count = 0;
+            try {
+              for (const f of readdirSync(dir)) {
+                if (!f.endsWith('.jsonl')) continue;
+                const content = readFileSync(path.join(dir, f), 'utf8');
+                for (const line of content.split('\n')) {
+                  const trimmed = line.trim();
+                  if (!trimmed) continue;
+                  try {
+                    const d = JSON.parse(trimmed);
+                    if (d.type === 'user' && d.message) {
+                      const msg = typeof d.message === 'string'
+                        ? JSON.parse(d.message.replace(/'/g, '"'))
+                        : d.message;
+                      if (msg?.role === 'user') { totalUserMessages++; count++; }
+                    }
+                  } catch { /* skip bad line */ }
+                }
+              }
+            } catch { /* skip */ }
+            projectMessages[slug] = count;
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    sendJson(res, 200, { startups, projectSessions, projectMessages, totalUserMessages });
     return;
   }
 
