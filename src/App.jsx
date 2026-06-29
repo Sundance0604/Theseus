@@ -5,6 +5,7 @@ import { AiDialogueStream } from './components/AiDialogueStream';
 import { UserInputPanel } from './components/UserInputPanel';
 import { PersonaInteractionOverlay } from './components/PersonaInteractionOverlay';
 import { ShipPanorama } from './scenes/ShipPanorama';
+import { EngineRoomScene } from './scenes/EngineRoom';
 import { COLORS } from './config/constants';
 
 const INTERACTION_PREVIEW = {
@@ -114,6 +115,17 @@ function App() {
     setScene('launch');
   };
 
+  // 引擎室跳转
+  const handleNavigateToEngineRoom = () => {
+    setScene('engineRoom');
+  };
+
+  // 从引擎室返回
+  const handleBackFromEngineRoom = () => {
+    setBackToNav(true);
+    setScene('launch');
+  };
+
   return (
     <div style={{
       position: 'relative',
@@ -129,8 +141,14 @@ function App() {
           personas={personas}
           onNavigateToDialogue={handleNavigateToDialogue}
           onNavigateToWarRoom={handleNavigateToWarRoom}
+          onNavigateToEngineRoom={handleNavigateToEngineRoom}
           initialPhase={backToNav ? 'launched' : undefined}
         />
+      )}
+
+      {/* ============ 场景3: 引擎室 ============ */}
+      {scene === 'engineRoom' && (
+        <EngineRoomScene onBack={handleBackFromEngineRoom} />
       )}
 
       {/* ============ 场景2: 对话界面 ============ */}

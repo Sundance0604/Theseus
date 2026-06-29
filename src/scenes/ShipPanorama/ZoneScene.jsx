@@ -23,7 +23,7 @@ const SHAKE_KEYFRAMES = `
  100%   { transform: skewX(-5deg) scale(1.05) translate( 0,  0) rotate(0deg); }
 }`;
 
-export const ZoneScene = ({ zone, personas, onBack, onEnterDialogue, onConfirmWarRoom }) => {
+export const ZoneScene = ({ zone, personas, onBack, onEnterDialogue, onConfirmWarRoom, onNavigateToEngineRoom }) => {
   if (!zone) return null;
 
   return (
@@ -73,7 +73,7 @@ export const ZoneScene = ({ zone, personas, onBack, onEnterDialogue, onConfirmWa
           <div style={{ width: '100%', height: '3px', backgroundColor: PAPER, marginBottom: '24px', boxShadow: `3px 3px 0px ${BLACK}` }} />
 
           {/* ---- 区域内容 ---- */}
-          {renderZoneContent(zone, personas, onEnterDialogue, onConfirmWarRoom)}
+          {renderZoneContent(zone, personas, onEnterDialogue, onConfirmWarRoom, onNavigateToEngineRoom)}
         </div>
       </div>
 
@@ -82,16 +82,24 @@ export const ZoneScene = ({ zone, personas, onBack, onEnterDialogue, onConfirmWa
   );
 };
 
-function renderZoneContent(zone, personas, onEnterDialogue, onConfirmWarRoom) {
+function renderZoneContent(zone, personas, onEnterDialogue, onConfirmWarRoom, onNavigateToEngineRoom) {
   switch (zone.id) {
     case 'crew':       return <CrewQuartersContent personas={personas} onEnterDialogue={onEnterDialogue} />;
     case 'warRoom':    return <WarRoomContent personas={personas} onConfirm={onConfirmWarRoom} />;
     case 'captain':    return <InfoPlaceholder label="CAPTAIN'S CABIN" desc="Personal dashboard — coming soon." />;
-    case 'engine':     return <InfoPlaceholder label="ENGINE ROOM" desc="System status — coming soon." />;
+    case 'engine':     return <EngineRoomBridge onNavigate={onNavigateToEngineRoom} />;
     case 'archive':    return <InfoPlaceholder label="ARCHIVE" desc="Historical records — coming soon." />;
     case 'memoryWard': return <InfoPlaceholder label="MEMORY WARD" desc="Isolated memory viewer — coming soon." />;
     default:           return null;
   }
+}
+
+/** 引擎室桥接组件 — 挂载后立即触发跳转 */
+function EngineRoomBridge({ onNavigate }) {
+  useEffect(() => {
+    onNavigate?.();
+  }, [onNavigate]);
+  return null;
 }
 
 /* ---- 占位页面 ---- */
