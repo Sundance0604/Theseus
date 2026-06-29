@@ -3,8 +3,24 @@ import { useChatManager } from './hooks/useChatManager';
 import { GameBackground } from './components/GameBackground';
 import { AiDialogueStream } from './components/AiDialogueStream';
 import { UserInputPanel } from './components/UserInputPanel';
+import { PersonaInteractionOverlay } from './components/PersonaInteractionOverlay';
 import { ShipPanorama } from './scenes/ShipPanorama';
 import { COLORS } from './config/constants';
+
+const INTERACTION_PREVIEW = {
+  id: 'development-interaction-preview',
+  kind: 'permission',
+  personaId: '',
+  toolName: 'Bash',
+  title: 'Bash',
+  description: '查看工作区文件变更摘要',
+  details: { command: 'git status --short' },
+  questions: [],
+  choices: [
+    { value: 'allow', label: '同意执行', description: '允许这一次操作' },
+    { value: 'deny', label: '拒绝执行', description: '让对方调整方案' },
+  ],
+};
 
 function App() {
   const {
@@ -18,9 +34,11 @@ function App() {
     isLoadingHistory,
     localService,
     error,
+    interactions,
     sendMessage,
     sendSeminarMessage,
     startWarRoom,
+    respondToInteraction,
     setActivePersonaId,
     cancelStreaming,
     clearHistory,
@@ -28,8 +46,14 @@ function App() {
     refreshLocalService,
   } = useChatManager();
 
+  const interactionPreviewEnabled = (
+    import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).get('preview') === 'interaction'
+  );
   // scene: 'launch' | 'dialogue'
-  const [scene, setScene] = useState('launch');
+  const [scene, setScene] = useState(
+    interactionPreviewEnabled ? 'dialogue' : 'launch',
+  );
   // 从对话返回时直接跳到 NAVIGATION 界面
   const [backToNav, setBackToNav] = useState(false);
 
@@ -49,6 +73,16 @@ function App() {
     || facilitator;
 
   const isWarRoom = dialogueMode === 'warRoom';
+  const activeInteraction = interactions[0] || (
+    interactionPreviewEnabled ? INTERACTION_PREVIEW : null
+  );
+  const interactionPersona = activeInteraction
+    ? (
+        personas.find(persona => persona.id === activeInteraction.personaId) ||
+        personas.find(persona => persona.halfPortraitUrl) ||
+        personas[0]
+      )
+    : null;
 
   // 从启动画面进入单人对��
   const handleNavigateToDialogue = (personaId) => {
@@ -454,6 +488,19 @@ function App() {
               }}
             />
           </div>
+
+          {activeInteraction && (
+            <PersonaInteractionOverlay
+              interaction={activeInteraction}
+              persona={interactionPersona}
+              userProfile={userProfile}
+              onRespond={
+                interactionPreviewEnabled
+                  ? async () => ({ preview: true })
+                  : respondToInteraction
+              }
+            />
+          )}
         </>
       )}
 

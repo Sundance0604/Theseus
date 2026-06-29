@@ -1,37 +1,43 @@
 # Ship of Theseus
 
-A local-first, game-styled interface for interacting with user-owned AI
-personas.
-
-The React/Pixi client is a presentation layer. Persona definitions, memories,
-conversation records and provider credentials stay in a local persona
-workspace selected by the user. No persona names, prompts or portraits are
-included in this repository.
+A local-first React/Pixi interface for user-owned AI personas. It provides
+single-persona conversations and an isolated multi-persona War Room while
+keeping persona definitions, portraits, memories and transcripts outside the
+frontend source tree.
 
 ## Quick start
 
-1. Install Node.js and Claude Code.
-2. Copy [PERSONA_SETUP.template.md](PERSONA_SETUP.template.md) into your private
-   persona workspace and complete the checklist.
-3. Set `THESEUS_PERSONA_HOME` to that private workspace.
-4. Configure your model provider in the same terminal.
-5. Run:
+Requirements: Node.js, Claude Code, and a private persona workspace.
 
 ```powershell
 npm install
+$env:THESEUS_PERSONA_HOME = "X:\path\to\private-persona-workspace"
 npm run dev
 ```
 
-Vite starts the loopback-only runtime automatically. The browser never receives
-the provider API key and cannot read the persona workspace directly.
+`npm run dev` starts both Vite and a loopback-only bridge to Claude Code.
+Configure the model provider in the same terminal before starting. Never put
+provider credentials in `VITE_*` variables because those may be exposed to the
+browser.
 
-## Privacy model
+Use [PERSONA_SETUP.template.md](PERSONA_SETUP.template.md) to prepare the
+private workspace. Detailed provider and directory instructions are in
+[LOCAL_AI_SETUP.md](LOCAL_AI_SETUP.md).
 
-- Keep the persona workspace outside this repository.
-- Never commit persona Markdown, portraits, memories, transcripts or API keys.
-- The selected remote model provider receives conversation content and any
-  persona context required to answer.
-- Local transcripts are stored under `bridge-server/data/` and ignored by Git.
-- Claude Code is launched without shell or network tools by this application.
+## Privacy
 
-See [LOCAL_AI_SETUP.md](LOCAL_AI_SETUP.md) for configuration details.
+- Persona Markdown, portraits and memories remain in the user-selected local
+  workspace.
+- Conversation records stay under ignored local runtime directories.
+- API keys remain in process environment variables or private Claude settings.
+- The configured remote model provider still receives prompts and relevant
+  persona context when generating a response.
+- Web tools remain disabled. Shell commands are available only after the user
+  approves the exact request in the visual interaction screen.
+
+No persona prompts, names, portraits, credentials or conversation records are
+included in this repository.
+
+## License
+
+GPL-3.0. See [LICENSE](LICENSE).

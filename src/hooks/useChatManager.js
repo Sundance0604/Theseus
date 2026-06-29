@@ -5,6 +5,7 @@ import {
   getLocalHistory,
   getLocalPersonas,
   getLocalProfile,
+  respondToLocalInteraction,
   startLocalSeminar,
   streamClaude,
   streamLocalSeminarMessage,
@@ -21,6 +22,7 @@ export const useChatManager = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [localService, setLocalService] = useState(null);
   const [error, setError] = useState(null);
+  const [interactions, setInteractions] = useState([]);
 
   const abortControllerRef = useRef(null);
   const streamingTextRef = useRef('');
@@ -28,6 +30,16 @@ export const useChatManager = () => {
   const seminarRef = useRef(null);
 
   const clearError = useCallback(() => setError(null), []);
+  const onInteraction = useCallback((interaction) => {
+    setInteractions((current) => (
+      current.some((item) => item.id === interaction.id)
+        ? current
+        : [...current, interaction]
+    ));
+  }, []);
+  const onInteractionResolved = useCallback(({ id }) => {
+    setInteractions((current) => current.filter((item) => item.id !== id));
+  }, []);
 
   const refreshLocalService = useCallback(async () => {
     const health = await checkBridgeHealth();
@@ -71,6 +83,26 @@ export const useChatManager = () => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsStreaming(false);
+    setInteractions([]);
+  }, []);
+
+  const respondToInteraction = useCallback(async ({
+    interactionId,
+    decision,
+    answers,
+    message,
+  }) => {
+    try {
+      await respondToLocalInteraction({
+        interactionId,
+        decision,
+        answers,
+        message,
+      });
+    } catch (interactionError) {
+      setError(interactionError.message);
+      throw interactionError;
+    }
   }, []);
 
   const updateStreamingMessage = useCallback((text, personaId, extra = {}) => {
@@ -159,6 +191,8 @@ export const useChatManager = () => {
       personaId,
       message: userText,
       signal: abortController.signal,
+      onInteraction,
+      onInteractionResolved,
       onChunk: (chunkText) => {
         streamingTextRef.current += chunkText;
         updateStreamingMessage(streamingTextRef.current, personaId);
@@ -170,6 +204,7 @@ export const useChatManager = () => {
           { isStreaming: false },
         );
         setIsStreaming(false);
+        setInteractions([]);
         abortControllerRef.current = null;
       },
       onError: (streamError) => {
@@ -180,10 +215,17 @@ export const useChatManager = () => {
           { isStreaming: false, isError: true },
         );
         setIsStreaming(false);
+        setInteractions([]);
         abortControllerRef.current = null;
       },
     });
-  }, [clearError, isStreaming, updateStreamingMessage]);
+  }, [
+    clearError,
+    isStreaming,
+    onInteraction,
+    onInteractionResolved,
+    updateStreamingMessage,
+  ]);
 
   const startWarRoom = useCallback((requestedParticipantIds) => {
     if (isStreaming) return;
@@ -228,6 +270,8 @@ export const useChatManager = () => {
     startLocalSeminar({
       participantIds,
       signal: abortController.signal,
+      onInteraction,
+      onInteractionResolved,
       onConnected: (connection) => {
         const connectedSeminar = {
           id: connection.seminarId,
@@ -248,6 +292,7 @@ export const useChatManager = () => {
           { isStreaming: false },
         );
         setIsStreaming(false);
+        setInteractions([]);
         abortControllerRef.current = null;
       },
       onError: (streamError) => {
@@ -258,12 +303,15 @@ export const useChatManager = () => {
           { isStreaming: false, isError: true },
         );
         setIsStreaming(false);
+        setInteractions([]);
         abortControllerRef.current = null;
       },
     });
   }, [
     cancelStreaming,
     isStreaming,
+    onInteraction,
+    onInteractionResolved,
     personas,
     updateStreamingMessage,
   ]);
@@ -308,6 +356,8 @@ export const useChatManager = () => {
       personaId,
       message: userText,
       signal: abortController.signal,
+      onInteraction,
+      onInteractionResolved,
       onChunk: (chunkText) => {
         streamingTextRef.current += chunkText;
         updateStreamingMessage(streamingTextRef.current, personaId);
@@ -319,6 +369,7 @@ export const useChatManager = () => {
           { isStreaming: false },
         );
         setIsStreaming(false);
+        setInteractions([]);
         abortControllerRef.current = null;
       },
       onError: (streamError) => {
@@ -329,10 +380,17 @@ export const useChatManager = () => {
           { isStreaming: false, isError: true },
         );
         setIsStreaming(false);
+        setInteractions([]);
         abortControllerRef.current = null;
       },
     });
-  }, [clearError, isStreaming, updateStreamingMessage]);
+  }, [
+    clearError,
+    isStreaming,
+    onInteraction,
+    onInteractionResolved,
+    updateStreamingMessage,
+  ]);
 
   const clearHistory = useCallback(async () => {
     const currentSeminar = seminarRef.current;
@@ -369,9 +427,11 @@ export const useChatManager = () => {
     isLoadingHistory,
     localService,
     error,
+    interactions,
     sendMessage,
     sendSeminarMessage,
     startWarRoom,
+    respondToInteraction,
     setActivePersonaId,
     cancelStreaming,
     clearHistory,

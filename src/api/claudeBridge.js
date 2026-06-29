@@ -35,6 +35,9 @@ export async function getLocalPersonas() {
     avatarUrl: persona.hasAvatar
       ? `${BRIDGE_URL}/persona-asset?personaId=${encodeURIComponent(persona.id)}`
       : '',
+    halfPortraitUrl: persona.hasHalfPortrait
+      ? `${BRIDGE_URL}/persona-half?personaId=${encodeURIComponent(persona.id)}`
+      : '',
   }));
 }
 
@@ -57,6 +60,9 @@ export async function getLocalProfile() {
   return {
     ...profile,
     avatarUrl: profile.hasUserAvatar ? `${BRIDGE_URL}/user-avatar` : '',
+    halfPortraitUrl: profile.hasUserHalfPortrait
+      ? `${BRIDGE_URL}/user-half`
+      : '',
   };
 }
 
@@ -90,6 +96,8 @@ async function streamRequest({
   onDone,
   onError,
   onConnected,
+  onInteraction,
+  onInteractionResolved,
   signal,
 }) {
   let fullText = '';
@@ -166,6 +174,14 @@ async function streamRequest({
               }
               break;
 
+            case 'interaction':
+              onInteraction?.(parsed);
+              break;
+
+            case 'interaction-resolved':
+              onInteractionResolved?.(parsed);
+              break;
+
             case 'done':
               // 流正常结束
               onDone(parsed.fullText || fullText);
@@ -211,6 +227,30 @@ async function streamRequest({
       onError(error);
     }
   }
+}
+
+export async function respondToLocalInteraction({
+  interactionId,
+  decision,
+  answers,
+  message,
+}) {
+  const response = await fetch(`${BRIDGE_URL}/interaction/respond`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      interactionId,
+      decision,
+      answers,
+      message,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
 }
 
 export function streamClaude({ personaId, message, ...callbacks }) {
