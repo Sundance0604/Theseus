@@ -8,16 +8,6 @@ import * as PIXI from 'pixi.js';
 export const ShipCanvas = ({ phase, onShipReady }) => {
   const canvasRef = useRef(null);
   const appRef = useRef(null);
-  const phaseRef = useRef(phase);
-  const onShipReadyRef = useRef(onShipReady);
-
-  useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
-
-  useEffect(() => {
-    onShipReadyRef.current = onShipReady;
-  }, [onShipReady]);
 
   useEffect(() => {
     let destroyed = false;
@@ -55,28 +45,28 @@ export const ShipCanvas = ({ phase, onShipReady }) => {
       app.stage.addChild(squareBg);
 
       // ================================================================
-      // 3. 虚空舰 — ship 右上角位于背景中心 (定位关系)
+      // 3. 虚空舰 — 叠在方形背景正中央，缩放至完全位于背景内
       // ================================================================
       const shipContainer = new PIXI.Container();
       const ship = new PIXI.Sprite(shipTex);
       ship.anchor.set(0.5);
-      // 缩放: 虚空舰约占方形背景内切圆直径的 65%
-      const shipMaxSize = bgSize * 0.75;
+      // 缩放: 虚空舰约占方形背景内切圆直径的 85%
+      const shipMaxSize = bgSize * 1.0;
       const shipBaseScale = shipMaxSize / Math.max(ship.texture.width, ship.texture.height);
       ship.scale.set(shipBaseScale);
       shipContainer.addChild(ship);
-      // ship 右上角 = background 中心
+      // ship 右上角 = background 中心靠右
       const shipW = ship.texture.width * shipBaseScale;
       const shipH = ship.texture.height * shipBaseScale;
-      shipContainer.x = app.screen.width * 0.5 - shipW / 2;
-      shipContainer.y = app.screen.height * 0.5 + shipH / 2;
+      shipContainer.x = app.screen.width * 0.6 - shipW / 2;
+      shipContainer.y = app.screen.height * 0.4 + shipH / 2;
       app.stage.addChild(shipContainer);
 
       // ================================================================
       // 4. 静态空热区 (暂不实现点击逻辑，仅为兼容父组件)
       // ================================================================
       const dummyZones = {};
-      onShipReadyRef.current?.(dummyZones);
+      if (onShipReady) onShipReady(dummyZones);
 
       // ================================================================
       // 5. 主循环：仅旋转方形背景
@@ -88,10 +78,10 @@ export const ShipCanvas = ({ phase, onShipReady }) => {
         // 虚空舰不动 — rotation 始终为 0
 
         // phase 缩放动画
-        if (phaseRef.current === 'zooming') {
-          const target = shipBaseScale * 1.8;
+        if (phase === 'zooming') {
+          const target = shipBaseScale * 1.5;
           ship.scale.set(ship.scale.x + (target - ship.scale.x) * 0.03);
-        } else if (phaseRef.current === 'idle') {
+        } else if (phase === 'idle') {
           ship.scale.set(ship.scale.x + (shipBaseScale - ship.scale.x) * 0.02);
         }
       });
@@ -99,9 +89,9 @@ export const ShipCanvas = ({ phase, onShipReady }) => {
 
     return () => {
       destroyed = true;
-      try { app.destroy(true, { children: true }); } catch {}
+      try { app.destroy(true, { children: true, texture: true }); } catch {}
     };
-  }, []);
+  }, [phase, onShipReady]);
 
   return (
     <div
