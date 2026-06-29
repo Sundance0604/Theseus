@@ -38,6 +38,22 @@ private workspace. Detailed provider and directory instructions are in
 No persona prompts, names, portraits, credentials or conversation records are
 included in this repository.
 
+## Engine Room Configuration
+
+The Engine Room scene reads Claude Code session statistics from your local
+machine. Before using it, create `bridge-server/engine_path.md` with these
+required fields:
+
+```md
+| 配置项 | 值 |
+|--------|-----|
+| claude_json | `C:\Users\<你的用户名>\.claude.json` |
+| projects_dir | `C:\Users\<你的用户名>\.claude\projects` |
+| num_startups_field | `numStartups` |
+```
+
+This file is listed in `.gitignore` and will never be committed.
+
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE).

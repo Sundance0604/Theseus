@@ -20,6 +20,7 @@ local-personas/
 personas/
 **/memories/
 **/conversations/
+bridge-server/engine_path.md
 
 # Editor directories and files
 .vscode/*
