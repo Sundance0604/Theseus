@@ -11,6 +11,10 @@ Use any local directory and create:
 ```text
 <persona-home>/
 ├── CLAUDE.md
+├── photo/
+│   ├── <portrait>.png
+│   └── half/
+│       └── <portrait>.png
 └── personas/
     ├── <persona-id>.md
     ├── memories/
@@ -62,6 +66,25 @@ npm run dev
 
 `npm run local-ai` is available for diagnostics but is not required during
 normal development.
+
+## Interactive approvals
+
+The bridge uses the Claude Agent SDK permission callback. Read/search tools run
+normally, file edits follow Claude Code's `acceptEdits` behavior, and shell
+commands pause the current turn until the user allows or rejects the exact
+request in the browser. Web tools remain disabled.
+
+While an approval or `AskUserQuestion` prompt is open, regular chat input is
+locked. The same Claude session continues after the user responds.
+
+For the P5R-style interaction screen, place each half-body portrait in a
+`half/` directory beside the configured portrait. Persona portraits are looked
+up by display name first, then by the default portrait filename:
+
+```text
+photo/example.png
+photo/half/<persona-display-name>.png
+```
 
 ## Local data ownership
 

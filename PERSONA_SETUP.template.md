@@ -34,6 +34,8 @@ Repeat this section for each persona:
 - Theme color: `<#RRGGBB>`
 - Theme color name: `<optional-localized-color-name>`
 - Default portrait: `<relative-private-image-path>`
+- Half-body portrait: place `<display-name>.<extension>` under the adjacent
+  `half/` directory; the default portrait filename is accepted as a fallback.
 - Expression variants: `<relative-private-directory-or-none>`
 - Private memory directory: `personas/memories/<persona-id>/`
 - Prompt patch: `<relative-path-or-none>`
@@ -67,6 +69,8 @@ loads the full file inside the private workspace.
 - [ ] Filenames do not contain a real name or account identifier.
 - [ ] Portraits are licensed for the intended use.
 - [ ] Private portraits are not copied into this public repository.
+- [ ] Every interaction portrait is stored inside the adjacent `half/`
+  directory and follows the display-name naming convention.
 - [ ] Paths in frontmatter are relative to the private workspace.
 
 ## Memory checklist
