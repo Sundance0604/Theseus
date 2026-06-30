@@ -1,58 +1,86 @@
 # Ship of Theseus
 
-A local-first React/Pixi interface for user-owned AI personas. It provides
-single-persona conversations and an isolated multi-persona War Room while
-keeping persona definitions, portraits, memories and transcripts outside the
-frontend source tree.
+A local-first React/Pixi interface for user-owned AI personas. The browser is
+only a presentation layer; `bridge-server/server.js` owns persona context,
+conversation state, local files, and model-provider access.
 
-## Quick start
+## Quick Start
 
 Requirements: Node.js, Claude Code, and a private persona workspace.
 
 ```powershell
 npm install
-$env:THESEUS_PERSONA_HOME = "X:\path\to\private-persona-workspace"
+Copy-Item .\persona_path.template.json .\persona_path.json
+notepad .\persona_path.json
 npm run dev
 ```
 
-`npm run dev` starts both Vite and a loopback-only bridge to Claude Code.
-Configure the model provider in the same terminal before starting. Never put
-provider credentials in `VITE_*` variables because those may be exposed to the
-browser.
+`persona_path.json` is the single local path configuration file. It is ignored
+by git and should sit in the project root during development. For the packaged
+Electron app, place `persona_path.json` next to the installed `.exe`.
 
-Use [PERSONA_SETUP.template.md](PERSONA_SETUP.template.md) to prepare the
-private workspace. Detailed provider and directory instructions are in
-[LOCAL_AI_SETUP.md](LOCAL_AI_SETUP.md).
+## External Path Configuration
+
+`persona_path.json` contains every local external link:
+
+```json
+{
+  "personaHome": "X:\\path\\to\\private-persona-workspace",
+  "personaProfile": "PERSONA_SETUP.private.md",
+  "memoryPaths": {
+    "definition": "personas/{personaId}.md",
+    "conversations": "personas/memories/{personaId}/",
+    "meetings": "personas/seminar/"
+  },
+  "engine": {
+    "claudeJson": "C:\\Users\\<your-user>\\.claude.json",
+    "projectsDir": "C:\\Users\\<your-user>\\.claude\\projects",
+    "numStartupsField": "numStartups"
+  }
+}
+```
+
+- `personaHome`: private persona workspace root.
+- `personaProfile`: profile file inside `personaHome`, used for portraits,
+  theme colors, facilitator, and user avatar.
+- `memoryPaths`: relative paths inside `personaHome`; `{personaId}` is replaced
+  with the selected persona id.
+- `engine`: local Claude Code statistics sources for Engine Room.
+
+Environment variables still override selected fields when needed:
+`THESEUS_CONFIG_FILE`, `THESEUS_PERSONA_HOME`, `AI_PERSONA_HOME`,
+`THESEUS_ENGINE_CLAUDE_JSON`, `THESEUS_ENGINE_PROJECTS_DIR`, and
+`THESEUS_DATA_DIR`.
+
+## Assets In Packaged Builds
+
+Built-in images such as `public/Yuri.png`, `public/memory.png`, and
+`public/ship.png` are bundled by Vite into `dist`. They do not belong in
+`persona_path.json`. The app resolves them through Vite's base URL so both
+`npm run dev` and packaged `file://` Electron builds can load them.
+
+External persona portraits are different: they remain in `personaHome` and are
+served by the local bridge through `/persona-asset`, `/persona-half`,
+`/user-avatar`, and `/user-half`.
+
+## Documentation
+
+- [Persona setup template](doc/PERSONA_SETUP.template.md)
+- [Local AI setup](doc/LOCAL_AI_SETUP.md)
+- [P5R control style guide](doc/P5R-CONTROL-STYLE-GUIDE.md)
+- [Visual interface notes](doc/Ship%20of%20Theseus.md)
 
 ## Privacy
 
-- Persona Markdown, portraits and memories remain in the user-selected local
+- Persona Markdown, portraits, and memories remain in the configured private
   workspace.
 - Conversation records stay under ignored local runtime directories.
 - API keys remain in process environment variables or private Claude settings.
-- The configured remote model provider still receives prompts and relevant
-  persona context when generating a response.
-- Web tools remain disabled. Shell commands are available only after the user
-  approves the exact request in the visual interaction screen.
+- Never put provider credentials in `VITE_*` variables because those are
+  exposed to the browser.
 
-No persona prompts, names, portraits, credentials or conversation records are
+No persona prompts, names, portraits, credentials, or conversation records are
 included in this repository.
-
-## Engine Room Configuration
-
-The Engine Room scene reads Claude Code session statistics from your local
-machine. Before using it, create `bridge-server/engine_path.md` with these
-required fields:
-
-```md
-| 配置项 | 值 |
-|--------|-----|
-| claude_json | `C:\Users\<你的用户名>\.claude.json` |
-| projects_dir | `C:\Users\<你的用户名>\.claude\projects` |
-| num_startups_field | `numStartups` |
-```
-
-This file is listed in `.gitignore` and will never be committed.
 
 ## License
 

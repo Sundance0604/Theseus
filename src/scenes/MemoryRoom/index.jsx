@@ -9,6 +9,7 @@ import {
   getMemoryStats,
   saveMemoryPersona,
 } from '../../api/claudeBridge';
+import { assetUrl, cssAssetUrl } from '../../config/assets';
 import { COLORS } from '../../config/constants';
 
 const FONT = '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif';
@@ -20,7 +21,7 @@ const YURI = {
   id: 'memory-keeper-yuri',
   name: 'Yuri',
   emoji: '◆',
-  halfPortraitUrl: '/Yuri.png',
+  halfPortraitUrl: assetUrl('Yuri.png'),
 };
 
 const INITIAL_CHOICES = [
@@ -504,7 +505,7 @@ export function MemoryRoomScene({ personas = [], userProfile, onBack }) {
       isolation: 'isolate',
       backgroundColor: COLORS.ANARCHY_BLACK,
       backgroundImage:
-        'linear-gradient(rgba(0,0,0,.16), rgba(0,0,0,.16)), url("/memory.png")',
+        `linear-gradient(rgba(0,0,0,.16), rgba(0,0,0,.16)), ${cssAssetUrl('memory.png')}`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       animation: screen === 'EXITING'
