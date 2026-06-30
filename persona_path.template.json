@@ -10,5 +10,19 @@
     "claudeJson": "C:\\Users\\<your-user>\\.claude.json",
     "projectsDir": "C:\\Users\\<your-user>\\.claude\\projects",
     "numStartupsField": "numStartups"
+  },
+  "claude": {
+    "executable": "",
+    "env": {
+      "ANTHROPIC_BASE_URL": "",
+      "ANTHROPIC_AUTH_TOKEN": "",
+      "ANTHROPIC_API_KEY": "",
+      "ANTHROPIC_MODEL": "",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL": "",
+      "ANTHROPIC_DEFAULT_SONNET_MODEL": "",
+      "ANTHROPIC_DEFAULT_HAIKU_MODEL": "",
+      "CLAUDE_CODE_SUBAGENT_MODEL": "",
+      "CLAUDE_CODE_EFFORT_LEVEL": ""
+    }
   }
 }

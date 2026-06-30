@@ -4,6 +4,7 @@ import { GameBackground } from './components/GameBackground';
 import { AiDialogueStream } from './components/AiDialogueStream';
 import { UserInputPanel } from './components/UserInputPanel';
 import { PersonaInteractionOverlay } from './components/PersonaInteractionOverlay';
+import { ElectronWindowControls } from './components/ElectronWindowControls';
 import { ShipPanorama } from './scenes/ShipPanorama';
 import { EngineRoomScene } from './scenes/EngineRoom';
 import { MemoryRoomScene } from './scenes/MemoryRoom';
@@ -154,6 +155,7 @@ function App() {
       overflow: 'hidden',
       backgroundColor: COLORS.ANARCHY_BLACK,
     }}>
+      <ElectronWindowControls />
 
       {/* ============ 场景1: 船全景启动画面 ============ */}
       {scene === 'launch' && (

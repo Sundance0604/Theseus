@@ -46,6 +46,12 @@ function readLocalConfig() {
 const localConfig = readLocalConfig();
 const memoryPathConfig = localConfig.memoryPaths || {};
 const engineConfig = localConfig.engine || {};
+const claudeConfig = localConfig.claude || {};
+const configuredClaudeEnv = Object.fromEntries(
+  Object.entries(claudeConfig.env || {})
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => [key, String(value)]),
+);
 const PERSONA_HOME =
   process.env.THESEUS_PERSONA_HOME ||
   process.env.AI_PERSONA_HOME ||
@@ -602,19 +608,33 @@ function publicMessages(transcript, persona) {
 
 function claudeExecutable() {
   if (process.env.CLAUDE_EXECUTABLE) return process.env.CLAUDE_EXECUTABLE;
+  if (claudeConfig.executable) return String(claudeConfig.executable);
   if (process.platform === 'win32' && process.env.APPDATA) {
-    const executable = path.join(
-      process.env.APPDATA,
-      'npm',
-      'node_modules',
-      '@anthropic-ai',
-      'claude-code',
-      'bin',
-      'claude.exe',
-    );
-    if (existsSync(executable)) return executable;
+    const npmBin = path.join(process.env.APPDATA, 'npm');
+    const candidates = [
+      path.join(
+        npmBin,
+        'node_modules',
+        '@anthropic-ai',
+        'claude-code',
+        'bin',
+        'claude.exe',
+      ),
+      path.join(npmBin, 'claude.exe'),
+      path.join(npmBin, 'claude.cmd'),
+    ];
+    const executable = candidates.find((candidate) => existsSync(candidate));
+    if (executable) return executable;
   }
   return 'claude';
+}
+
+function claudeRuntimeEnv() {
+  return {
+    ...process.env,
+    ...configuredClaudeEnv,
+    CLAUDE_AGENT_SDK_CLIENT_APP: 'ship-of-theseus',
+  };
 }
 
 function sseWrite(res, event, data) {
@@ -873,10 +893,11 @@ async function callClaude({
   const hasExistingConversation = transcript.messages.some(
     (item) => item.sender === 'ai',
   );
+  const runtimeEnv = claudeRuntimeEnv();
   const effort = ['low', 'medium', 'high', 'max'].includes(
-    process.env.CLAUDE_CODE_EFFORT_LEVEL,
+    runtimeEnv.CLAUDE_CODE_EFFORT_LEVEL,
   )
-    ? process.env.CLAUDE_CODE_EFFORT_LEVEL
+    ? runtimeEnv.CLAUDE_CODE_EFFORT_LEVEL
     : 'max';
 
   try {
@@ -886,10 +907,7 @@ async function callClaude({
         abortController,
         cwd: PERSONA_HOME,
         pathToClaudeCodeExecutable: claudeExecutable(),
-        env: {
-          ...process.env,
-          CLAUDE_AGENT_SDK_CLIENT_APP: 'ship-of-theseus',
-        },
+        env: runtimeEnv,
         systemPrompt: { type: 'preset', preset: 'claude_code' },
         settingSources: ['project'],
         tools: [
@@ -1079,7 +1097,8 @@ async function handleRequest(req, res) {
       claudeExecutableAvailable:
         claudeExecutable() === 'claude' || existsSync(claudeExecutable()),
       providerConfigured: Boolean(
-        process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY,
+        claudeRuntimeEnv().ANTHROPIC_AUTH_TOKEN ||
+        claudeRuntimeEnv().ANTHROPIC_API_KEY,
       ),
     });
     return;
@@ -1609,7 +1628,8 @@ const server = http.createServer((req, res) => {
 
 function printStartupSummary(prefix) {
   const providerConfigured = Boolean(
-    process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY,
+    claudeRuntimeEnv().ANTHROPIC_AUTH_TOKEN ||
+    claudeRuntimeEnv().ANTHROPIC_API_KEY,
   );
   console.log(`\n⚓ ${prefix}`);
   console.log(`   Persona workspace: ${PERSONA_HOME || 'NOT CONFIGURED'}`);
