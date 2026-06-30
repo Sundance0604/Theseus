@@ -5,7 +5,7 @@ const FONT = '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif';
 const PANEL_SHAPE =
   'polygon(2.5% 4%, 96.5% 0, 100% 17%, 98% 88%, 94% 100%, 5% 96%, 0 80%, 1% 15%)';
 
-function Portrait({
+export function Portrait({
   src,
   fallback,
   side,
@@ -70,7 +70,7 @@ function Portrait({
   );
 }
 
-function ChoiceButton({ option, index, selected, disabled, onClick }) {
+export function ChoiceButton({ option, index, selected, disabled, onClick }) {
   return (
     <button
       type="button"
@@ -111,7 +111,7 @@ function ChoiceButton({ option, index, selected, disabled, onClick }) {
         left: '20px',
         top: '10px',
         fontSize: '29px',
-        color: selected ? COLORS.ANARCHY_RED : '#FFD700',
+        color: COLORS.ANARCHY_RED,
       }}>
         {index + 1}
       </span>
@@ -142,7 +142,7 @@ function ChoiceButton({ option, index, selected, disabled, onClick }) {
   );
 }
 
-function InteractionPanel({
+export function InteractionPanel({
   phase,
   persona,
   interaction,
@@ -151,15 +151,17 @@ function InteractionPanel({
   command,
   questionCounter,
   onAdvance,
+  promptLabel = 'CLICK TO RESPOND',
 }) {
   const isBriefing = phase === 'briefing';
+  const isInteractive = isBriefing && Boolean(onAdvance);
   return (
     <div
-      role={isBriefing ? 'button' : undefined}
-      tabIndex={isBriefing ? 0 : -1}
-      aria-label={isBriefing ? 'Read interaction and show choices' : undefined}
-      onClick={isBriefing ? onAdvance : undefined}
-      onKeyDown={isBriefing ? (event) => {
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : -1}
+      aria-label={isInteractive ? 'Read interaction and show choices' : undefined}
+      onClick={isInteractive ? onAdvance : undefined}
+      onKeyDown={isInteractive ? (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onAdvance();
@@ -177,8 +179,8 @@ function InteractionPanel({
         filter: isBriefing ? 'none' : 'grayscale(.65) brightness(.55)',
         transform: 'rotate(-.6deg) scale(0.78)',
         transformOrigin: 'left bottom',
-        cursor: isBriefing ? 'pointer' : 'default',
-        pointerEvents: isBriefing ? 'auto' : 'none',
+        cursor: isInteractive ? 'pointer' : 'default',
+        pointerEvents: isInteractive ? 'auto' : 'none',
         transition: 'opacity .25s, filter .25s',
         outline: 'none',
       }}
@@ -313,7 +315,7 @@ function InteractionPanel({
         )}
       </div>
 
-      {isBriefing && (
+      {isInteractive && (
         <div style={{
           position: 'absolute',
           right: '45px',
@@ -329,7 +331,7 @@ function InteractionPanel({
           letterSpacing: '2px',
           animation: 'interactionPromptPulse .8s infinite',
         }}>
-          CLICK TO RESPOND
+          {promptLabel}
           <span style={{
             width: 0,
             height: 0,

@@ -16,6 +16,7 @@ import {
   readdirSync,
   readFileSync,
   renameSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -54,6 +55,12 @@ const PERSONA_PROFILE_PATH = PERSONA_HOME
   ? path.resolve(
       PERSONA_HOME,
       localConfig.personaProfile || 'PERSONA_SETUP.private.md',
+    )
+  : '';
+const MEMORY_PATH_MAP = PERSONA_HOME
+  ? path.resolve(
+      PERSONA_HOME,
+      localConfig.memoryPathMap || 'memory_path.md',
     )
   : '';
 const DATA_DIR =
@@ -272,6 +279,231 @@ function assertPersonaId(value) {
     error.statusCode = 400;
     throw error;
   }
+}
+
+function readMemoryPathMap() {
+  if (!MEMORY_PATH_MAP || !existsSync(MEMORY_PATH_MAP)) {
+    const error = new Error(
+      '缺少 memory_path.md；请将 memory_path.template.md 复制到 Persona 工作区',
+    );
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const markdown = readFileSync(MEMORY_PATH_MAP, 'utf8');
+  const readEntry = (englishLabel, chineseLabel) => {
+    const pattern = new RegExp(
+      `(?:${englishLabel}|${chineseLabel})\\s*[：:]\\s*\`([^\`]+)\``,
+      'i',
+    );
+    return markdown.match(pattern)?.[1]?.trim() || '';
+  };
+  const result = {
+    definition: readEntry('Persona definition', '人格定义'),
+    conversations: readEntry('Conversation records', '对话记录'),
+    meetings: readEntry('Meeting records', '会议记录'),
+  };
+
+  if (!result.definition || !result.conversations || !result.meetings) {
+    const error = new Error('memory_path.md 缺少人格定义、对话记录或会议记录路径');
+    error.statusCode = 500;
+    throw error;
+  }
+  return result;
+}
+
+function resolveMemoryPath(template, personaId) {
+  assertPersonaId(personaId);
+  if (
+    typeof template !== 'string' ||
+    path.isAbsolute(template) ||
+    template.split(/[\\/]/).includes('..')
+  ) {
+    const error = new Error('memory_path.md 包含不安全路径');
+    error.statusCode = 500;
+    throw error;
+  }
+
+  const relativePath = template.replaceAll('{personaId}', personaId);
+  const workspaceRoot = path.resolve(PERSONA_HOME);
+  const resolved = path.resolve(workspaceRoot, relativePath);
+  if (
+    resolved !== workspaceRoot &&
+    !resolved.startsWith(`${workspaceRoot}${path.sep}`)
+  ) {
+    const error = new Error('Memory Room 路径越出 Persona 工作区');
+    error.statusCode = 500;
+    throw error;
+  }
+  return resolved;
+}
+
+function markdownFiles(rootPath) {
+  if (!rootPath || !existsSync(rootPath)) return [];
+  const entries = readdirSync(rootPath, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const entryPath = path.join(rootPath, entry.name);
+    if (entry.isDirectory()) return markdownFiles(entryPath);
+    return entry.isFile() && entry.name.toLowerCase().endsWith('.md')
+      ? [entryPath]
+      : [];
+  });
+}
+
+function readPersonaDefinition(personaId) {
+  const paths = readMemoryPathMap();
+  const definitionPath = resolveMemoryPath(paths.definition, personaId);
+  const expectedPath = personaFiles().get(personaId);
+  if (
+    !expectedPath ||
+    path.resolve(definitionPath) !== path.resolve(expectedPath)
+  ) {
+    const error = new Error('memory_path.md 的人格定义与角色清单不一致');
+    error.statusCode = 500;
+    throw error;
+  }
+  return readFileSync(definitionPath, 'utf8');
+}
+
+function savePersonaDefinition(personaId, content) {
+  const paths = readMemoryPathMap();
+  const definitionPath = resolveMemoryPath(paths.definition, personaId);
+  const expectedPath = personaFiles().get(personaId);
+  if (
+    !expectedPath ||
+    path.resolve(definitionPath) !== path.resolve(expectedPath)
+  ) {
+    const error = new Error('memory_path.md 的人格定义与角色清单不一致');
+    error.statusCode = 500;
+    throw error;
+  }
+  const temp = `${definitionPath}.${process.pid}.tmp`;
+  writeFileSync(temp, content, 'utf8');
+  renameSync(temp, definitionPath);
+}
+
+function memoryStats(personaId) {
+  const persona = readPersona(personaId);
+  const paths = readMemoryPathMap();
+  const conversationFiles = markdownFiles(
+    resolveMemoryPath(paths.conversations, personaId),
+  );
+  const meetingFiles = markdownFiles(
+    resolveMemoryPath(paths.meetings, personaId),
+  );
+  const needles = [personaId, persona.name]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean);
+  const relevantMeetings = meetingFiles.filter((file) => {
+    const content = readFileSync(file, 'utf8').toLowerCase();
+    return needles.some((needle) => content.includes(needle));
+  });
+
+  return {
+    personaId,
+    conversationCount: conversationFiles.length,
+    meetingCount: relevantMeetings.length,
+  };
+}
+
+function archiveFileId(filePath) {
+  const workspaceRoot = path.resolve(PERSONA_HOME);
+  const relativePath = path.relative(workspaceRoot, filePath);
+  return Buffer.from(relativePath, 'utf8').toString('base64url');
+}
+
+function archiveFilePath(fileId) {
+  let relativePath = '';
+  try {
+    relativePath = Buffer.from(String(fileId || ''), 'base64url').toString('utf8');
+  } catch {
+    const error = new Error('无效的档案文件 ID');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (
+    !relativePath ||
+    path.isAbsolute(relativePath) ||
+    relativePath.split(/[\\/]/).includes('..')
+  ) {
+    const error = new Error('无效的档案文件 ID');
+    error.statusCode = 400;
+    throw error;
+  }
+  const workspaceRoot = path.resolve(PERSONA_HOME);
+  const resolved = path.resolve(workspaceRoot, relativePath);
+  if (
+    resolved !== workspaceRoot &&
+    !resolved.startsWith(`${workspaceRoot}${path.sep}`)
+  ) {
+    const error = new Error('档案路径越出 Persona 工作区');
+    error.statusCode = 400;
+    throw error;
+  }
+  return resolved;
+}
+
+function markdownTitle(content, filePath) {
+  const meta = parseFrontmatter(content);
+  const heading = content.match(/^#\s+(.+)$/m)?.[1]?.trim();
+  return String(
+    meta.title ||
+    meta.name ||
+    heading ||
+    path.basename(filePath, path.extname(filePath)),
+  ).slice(0, 160);
+}
+
+function archiveEntry(filePath, kind, personaId = '') {
+  let content = '';
+  try {
+    content = readFileSync(filePath, 'utf8');
+  } catch {
+    content = '';
+  }
+  const stats = statSync(filePath);
+  return {
+    id: archiveFileId(filePath),
+    kind,
+    personaId,
+    title: markdownTitle(content, filePath),
+    fileName: path.basename(filePath),
+    updatedAt: stats.mtime.toISOString(),
+    size: stats.size,
+  };
+}
+
+function archiveFiles(kind, personaId = '') {
+  const paths = readMemoryPathMap();
+  if (kind === 'meetings') {
+    return markdownFiles(resolveMemoryPath(paths.meetings, personaId || readAllPersonas()[0]?.id || ''))
+      .map((filePath) => archiveEntry(filePath, 'meetings'))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+  if (kind === 'conversations') {
+    assertPersonaId(personaId);
+    return markdownFiles(resolveMemoryPath(paths.conversations, personaId))
+      .map((filePath) => archiveEntry(filePath, 'conversations', personaId))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+  const error = new Error('未知档案类型');
+  error.statusCode = 400;
+  throw error;
+}
+
+function readArchiveFile(kind, fileId, personaId = '') {
+  const files = archiveFiles(kind, personaId);
+  const entry = files.find((candidate) => candidate.id === fileId);
+  if (!entry) {
+    const error = new Error('档案文件不存在或不在允许路径中');
+    error.statusCode = 404;
+    throw error;
+  }
+  const filePath = archiveFilePath(fileId);
+  return {
+    ...entry,
+    content: readFileSync(filePath, 'utf8'),
+  };
 }
 
 function transcriptPath(personaId) {
@@ -757,7 +989,7 @@ function setCors(req, res) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
@@ -893,6 +1125,62 @@ async function handleRequest(req, res) {
     sendJson(res, 200, {
       personas: readAllPersonas().map(publicPersona),
     });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/memory/persona') {
+    const personaId = (url.searchParams.get('personaId') || '').toLowerCase();
+    assertPersonaId(personaId);
+    sendJson(res, 200, {
+      personaId,
+      content: readPersonaDefinition(personaId),
+    });
+    return;
+  }
+
+  if (req.method === 'PUT' && url.pathname === '/memory/persona') {
+    const body = await readJsonBody(req);
+    const personaId = String(body.personaId || '').toLowerCase();
+    const content = String(body.content ?? '');
+    assertPersonaId(personaId);
+    if (!content.trim()) {
+      const error = new Error('人格定义不能为空');
+      error.statusCode = 400;
+      throw error;
+    }
+    if (content.length > 1_000_000) {
+      const error = new Error('人格定义不能超过 1MB');
+      error.statusCode = 413;
+      throw error;
+    }
+    savePersonaDefinition(personaId, content);
+    sendJson(res, 200, { saved: true, personaId });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/memory/stats') {
+    const personaId = (url.searchParams.get('personaId') || '').toLowerCase();
+    assertPersonaId(personaId);
+    sendJson(res, 200, memoryStats(personaId));
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/archive/list') {
+    const kind = url.searchParams.get('kind') || 'meetings';
+    const personaId = (url.searchParams.get('personaId') || '').toLowerCase();
+    sendJson(res, 200, {
+      kind,
+      personaId,
+      files: archiveFiles(kind, personaId),
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/archive/file') {
+    const kind = url.searchParams.get('kind') || 'meetings';
+    const personaId = (url.searchParams.get('personaId') || '').toLowerCase();
+    const fileId = url.searchParams.get('fileId') || '';
+    sendJson(res, 200, readArchiveFile(kind, fileId, personaId));
     return;
   }
 

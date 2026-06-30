@@ -6,6 +6,8 @@ import { UserInputPanel } from './components/UserInputPanel';
 import { PersonaInteractionOverlay } from './components/PersonaInteractionOverlay';
 import { ShipPanorama } from './scenes/ShipPanorama';
 import { EngineRoomScene } from './scenes/EngineRoom';
+import { MemoryRoomScene } from './scenes/MemoryRoom';
+import { ArchiveRoomScene } from './scenes/ArchiveRoom';
 import { COLORS } from './config/constants';
 
 const INTERACTION_PREVIEW = {
@@ -126,6 +128,24 @@ function App() {
     setScene('launch');
   };
 
+  const handleNavigateToMemoryRoom = () => {
+    setScene('memoryRoom');
+  };
+
+  const handleBackFromMemoryRoom = () => {
+    setBackToNav(true);
+    setScene('launch');
+  };
+
+  const handleNavigateToArchiveRoom = () => {
+    setScene('archiveRoom');
+  };
+
+  const handleBackFromArchiveRoom = () => {
+    setBackToNav(true);
+    setScene('launch');
+  };
+
   return (
     <div style={{
       position: 'relative',
@@ -142,6 +162,8 @@ function App() {
           onNavigateToDialogue={handleNavigateToDialogue}
           onNavigateToWarRoom={handleNavigateToWarRoom}
           onNavigateToEngineRoom={handleNavigateToEngineRoom}
+          onNavigateToMemoryRoom={handleNavigateToMemoryRoom}
+          onNavigateToArchiveRoom={handleNavigateToArchiveRoom}
           initialPhase={backToNav ? 'launched' : undefined}
         />
       )}
@@ -149,6 +171,21 @@ function App() {
       {/* ============ 场景3: 引擎室 ============ */}
       {scene === 'engineRoom' && (
         <EngineRoomScene onBack={handleBackFromEngineRoom} />
+      )}
+
+      {scene === 'memoryRoom' && (
+        <MemoryRoomScene
+          personas={personas}
+          userProfile={userProfile}
+          onBack={handleBackFromMemoryRoom}
+        />
+      )}
+
+      {scene === 'archiveRoom' && (
+        <ArchiveRoomScene
+          personas={personas}
+          onBack={handleBackFromArchiveRoom}
+        />
       )}
 
       {/* ============ 场景2: 对话界面 ============ */}

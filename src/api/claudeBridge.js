@@ -313,3 +313,67 @@ export async function getEngineRoomStats() {
   }
   return response.json();
 }
+
+export async function getMemoryPersona(personaId, signal) {
+  const response = await fetch(
+    `${BRIDGE_URL}/memory/persona?personaId=${encodeURIComponent(personaId)}`,
+    { signal },
+  );
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
+}
+
+export async function saveMemoryPersona(personaId, content, signal) {
+  const response = await fetch(`${BRIDGE_URL}/memory/persona`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ personaId, content }),
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
+}
+
+export async function getMemoryStats(personaId, signal) {
+  const response = await fetch(
+    `${BRIDGE_URL}/memory/stats?personaId=${encodeURIComponent(personaId)}`,
+    { signal },
+  );
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
+}
+
+export async function getArchiveList({ kind, personaId = '', signal }) {
+  const params = new URLSearchParams({ kind });
+  if (personaId) params.set('personaId', personaId);
+  const response = await fetch(`${BRIDGE_URL}/archive/list?${params}`, {
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
+}
+
+export async function getArchiveFile({
+  kind,
+  fileId,
+  personaId = '',
+  signal,
+}) {
+  const params = new URLSearchParams({ kind, fileId });
+  if (personaId) params.set('personaId', personaId);
+  const response = await fetch(`${BRIDGE_URL}/archive/file?${params}`, {
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+  return response.json();
+}

@@ -18,6 +18,8 @@ export const ShipPanorama = ({
   onNavigateToDialogue,
   onNavigateToWarRoom,
   onNavigateToEngineRoom,
+  onNavigateToMemoryRoom,
+  onNavigateToArchiveRoom,
   initialPhase,
 }) => {
   const [phase, setPhase] = useState(initialPhase || 'idle');
@@ -25,8 +27,16 @@ export const ShipPanorama = ({
 
   // 点击左侧导航按钮 → 进入对应子场景
   const handleNavigateZone = useCallback((zoneId) => {
+    if (zoneId === 'memoryWard') {
+      onNavigateToMemoryRoom?.();
+      return;
+    }
+    if (zoneId === 'archive') {
+      onNavigateToArchiveRoom?.();
+      return;
+    }
     setEnteredZone(ZONE_DEFS[zoneId] || null);
-  }, []);
+  }, [onNavigateToArchiveRoom, onNavigateToMemoryRoom]);
 
   const handleLaunch = useCallback(() => {
     setPhase('zooming');
