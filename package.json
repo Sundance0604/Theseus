@@ -28,6 +28,12 @@
       "bridge-server/**/*",
       "package.json"
     ],
+    "extraFiles": [
+      {
+        "from": "persona_path.json",
+        "to": "persona_path.json"
+      }
+    ],
     "win": {
       "target": "nsis",
       "signAndEditExecutable": false,
