@@ -24,21 +24,25 @@ Use any local directory and create:
 Complete [PERSONA_SETUP.template.md](PERSONA_SETUP.template.md) inside that
 private directory. Do not copy the completed file back into this repository.
 
-## 2. Select the workspace
+## 2. Configure local paths
 
-PowerShell:
+Copy the root template and edit the private paths:
 
 ```powershell
-$env:THESEUS_PERSONA_HOME = "X:\path\to\private-persona-workspace"
+Copy-Item .\persona_path.template.json .\persona_path.json
+notepad .\persona_path.json
 ```
 
-Bash:
+The root `persona_path.json` is the single local path map for:
 
-```bash
-export THESEUS_PERSONA_HOME="/path/to/private-persona-workspace"
-```
+- `personaHome`: private workspace root.
+- `personaProfile`: private profile file inside the workspace.
+- `memoryPaths`: persona definition, conversation, and seminar paths relative
+  to the workspace.
+- `engine`: local Claude Code statistics files used by Engine Room.
 
-`AI_PERSONA_HOME` remains supported as a backwards-compatible variable.
+`THESEUS_PERSONA_HOME` and `AI_PERSONA_HOME` remain supported as
+backwards-compatible workspace overrides.
 
 ## 3. Configure the model provider
 

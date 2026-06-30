@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getEngineRoomStats } from '../../api/claudeBridge';
+import { cssAssetUrl } from '../../config/assets';
 import { COLORS } from '../../config/constants';
 
 const FONT = '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif';
@@ -37,7 +38,7 @@ export const EngineRoomScene = ({ onBack }) => {
       zIndex: 50,
       display: 'flex', flexDirection: 'column',
       // engine.png 作为背景
-      backgroundImage: `url('/engine.png')`,
+      backgroundImage: cssAssetUrl('engine.png'),
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',

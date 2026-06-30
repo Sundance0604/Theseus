@@ -23,19 +23,19 @@ npm run build        # 生产构建
   ↕ fetch + SSE 流
 桥接后端 (bridge-server/server.js)  ← 仅本地回环
   ↕ 文件系统
-外部角色工作区 (THESEUS_PERSONA_HOME 指向)
+外部角色工作区 (`persona_path.json` 的 `personaHome` 指向)
 ```
 
 - 前端入口: `src/main.jsx` → `src/App.jsx`（无路由，纯 state 切换场景）
 - 状态中心: `src/hooks/useChatManager.js`
 - API 层: `src/api/claudeBridge.js`
 - 桥接后端: `bridge-server/server.js`
-- 角色数据: 外部目录，由 `theseus.local.json` 的 `personaHome` 指定
+- 角色数据: 外部目录，由 `persona_path.json` 的 `personaHome` 指定
 
 ## 核心约定
 
 ### P5R 视觉系统（必读）
-参见 [P5R-CONTROL-STYLE-GUIDE.md](./P5R-CONTROL-STYLE-GUIDE.md) 获取完整设计规范。
+参见 [P5R-CONTROL-STYLE-GUIDE.md](./doc/P5R-CONTROL-STYLE-GUIDE.md) 获取完整设计规范。
 
 关键要点：
 - 只用三色: `PAPER`(#F5F0EB), `ANARCHY`(#D40000), `BLACK`(#1A1A1A)
@@ -72,9 +72,9 @@ SSE 流格式：每行一个 JSON 对象，`data:` 前缀。流结束发送 `[DO
 | 文档 | 内容 |
 |------|------|
 | [README.md](./README.md) | 项目概览和快速开始 |
-| [P5R-CONTROL-STYLE-GUIDE.md](./P5R-CONTROL-STYLE-GUIDE.md) | UI 控件设计规范（必读） |
-| [LOCAL_AI_SETUP.md](./LOCAL_AI_SETUP.md) | 本地 AI 配置指南 |
-| [PERSONA_SETUP.template.md](./PERSONA_SETUP.template.md) | 角色工作区搭建清单 |
+| [P5R-CONTROL-STYLE-GUIDE.md](./doc/P5R-CONTROL-STYLE-GUIDE.md) | UI 控件设计规范（必读） |
+| [LOCAL_AI_SETUP.md](./doc/LOCAL_AI_SETUP.md) | 本地 AI 配置指南 |
+| [PERSONA_SETUP.template.md](./doc/PERSONA_SETUP.template.md) | 角色工作区搭建清单 |
 
 ## 组件文件结构约定
 
@@ -115,11 +115,11 @@ src/
 
 ## 容易踩的坑
 
-1. **运行不起来的首要原因**: 未配置 `THESEUS_PERSONA_HOME` 环境变量，或外部角色工作区结构不完整
+1. **运行不起来的首要原因**: 未配置 `persona_path.json`，或外部角色工作区结构不完整
 2. **Pixi.js 泄漏**: 场景切换时必须在 `useEffect` 清理函数中调用 `app.destroy(true, { children: true })`，否则 canvas 会堆积。应在组件卸载时销毁，不仅是挂载时。
 3. **并发请求**: 后端每个角色只允许一个活跃请求，同时发两个会 409。前端 `isStreaming` 状态会禁用 UI 控件防止重复发送。
 4. **样式修改**: 样式全部内联在 JSX 中，修改视觉需要编辑组件文件而非 CSS。全局样式文件 `src/index.css` 仅为 reset，`src/App.css` 仅定义 `@keyframes` 动画。
-5. **角色放错位置**: 角色 `.md` 文件必须在 `theseus.local.json` 指定的外部目录，不在仓库内
+5. **角色放错位置**: 角色 `.md` 文件必须在 `persona_path.json` 指定的外部目录，不在仓库内
 6. **颜色常量**: 所有新组件必须从 `src/config/constants.js` 导入 `COLORS`，禁止在组件内重新声明颜色变量。部分旧组件（如 `LaunchControls.jsx`）仍有内联颜色声明，需逐步统一。
 7. **项目为纯 JavaScript**: 无 TypeScript，类型靠隐式约定和少量 JSDoc。
 8. **零测试覆盖**: 无 Jest/Vitest 配置，仅靠 `oxlint` 做静态检查。

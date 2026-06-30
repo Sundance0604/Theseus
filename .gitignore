@@ -10,17 +10,18 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+release/
+release-electron/
 *.local
 bridge-server/data/
 .env
 .env.*
 !.env.example
-theseus.local.json
+persona_path.json
 local-personas/
 personas/
 **/memories/
 **/conversations/
-bridge-server/engine_path.md
 
 # Editor directories and files
 .vscode/*

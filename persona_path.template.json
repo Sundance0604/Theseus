@@ -1,0 +1,14 @@
+{
+  "personaHome": "X:\\path\\to\\private-persona-workspace",
+  "personaProfile": "PERSONA_SETUP.private.md",
+  "memoryPaths": {
+    "definition": "personas/{personaId}.md",
+    "conversations": "personas/memories/{personaId}/",
+    "meetings": "personas/seminar/"
+  },
+  "engine": {
+    "claudeJson": "C:\\Users\\<your-user>\\.claude.json",
+    "projectsDir": "C:\\Users\\<your-user>\\.claude\\projects",
+    "numStartupsField": "numStartups"
+  }
+}
