@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getArchiveFile, getArchiveList } from '../../api/claudeBridge';
+import { cssAssetUrl } from '../../config/assets';
 import { COLORS } from '../../config/constants';
 
 const FONT = '"Passion One", "Impact", "Bebas Neue", "Arial Black", sans-serif';
@@ -334,7 +335,7 @@ export function ArchiveRoomScene({ personas = [], onBack }) {
       overflow: 'hidden',
       backgroundColor: COLORS.ANARCHY_BLACK,
       backgroundImage:
-        'linear-gradient(rgba(0,0,0,.22), rgba(0,0,0,.34)), url("/archive.png")',
+        `linear-gradient(rgba(0,0,0,.22), rgba(0,0,0,.34)), ${cssAssetUrl('archive.png')}`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       isolation: 'isolate',

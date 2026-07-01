@@ -30,9 +30,8 @@ const HOST = process.env.THESEUS_HOST || '127.0.0.1';
 const PORT = Number(process.env.THESEUS_PORT || 3099);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const LOCAL_CONFIG_PATH =
-  process.env.THESEUS_CONFIG_FILE ||
-  path.resolve(__dirname, '..', 'theseus.local.json');
+const DEFAULT_CONFIG_PATH = path.resolve(__dirname, '..', 'persona_path.json');
+const LOCAL_CONFIG_PATH = process.env.THESEUS_CONFIG_FILE || DEFAULT_CONFIG_PATH;
 
 function readLocalConfig() {
   if (!existsSync(LOCAL_CONFIG_PATH)) return {};
@@ -45,6 +44,14 @@ function readLocalConfig() {
 }
 
 const localConfig = readLocalConfig();
+const memoryPathConfig = localConfig.memoryPaths || {};
+const engineConfig = localConfig.engine || {};
+const claudeConfig = localConfig.claude || {};
+const configuredClaudeEnv = Object.fromEntries(
+  Object.entries(claudeConfig.env || {})
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => [key, String(value)]),
+);
 const PERSONA_HOME =
   process.env.THESEUS_PERSONA_HOME ||
   process.env.AI_PERSONA_HOME ||
@@ -57,12 +64,16 @@ const PERSONA_PROFILE_PATH = PERSONA_HOME
       localConfig.personaProfile || 'PERSONA_SETUP.private.md',
     )
   : '';
-const MEMORY_PATH_MAP = PERSONA_HOME
-  ? path.resolve(
-      PERSONA_HOME,
-      localConfig.memoryPathMap || 'memory_path.md',
-    )
-  : '';
+const ENGINE_CLAUDE_JSON =
+  process.env.THESEUS_ENGINE_CLAUDE_JSON ||
+  engineConfig.claudeJson ||
+  path.join(os.homedir(), '.claude.json');
+const ENGINE_PROJECTS_DIR =
+  process.env.THESEUS_ENGINE_PROJECTS_DIR ||
+  engineConfig.projectsDir ||
+  path.join(os.homedir(), '.claude', 'projects');
+const ENGINE_NUM_STARTUPS_FIELD =
+  engineConfig.numStartupsField || 'numStartups';
 const DATA_DIR =
   process.env.THESEUS_DATA_DIR || path.join(__dirname, 'data', 'conversations');
 const SEMINAR_DIR = path.join(path.dirname(DATA_DIR), 'seminars');
@@ -282,34 +293,20 @@ function assertPersonaId(value) {
 }
 
 function readMemoryPathMap() {
-  if (!MEMORY_PATH_MAP || !existsSync(MEMORY_PATH_MAP)) {
-    const error = new Error(
-      '缺少 memory_path.md；请将 memory_path.template.md 复制到 Persona 工作区',
-    );
-    error.statusCode = 503;
-    throw error;
+  const configured = {
+    definition: String(memoryPathConfig.definition || '').trim(),
+    conversations: String(memoryPathConfig.conversations || '').trim(),
+    meetings: String(memoryPathConfig.meetings || '').trim(),
+  };
+  if (configured.definition && configured.conversations && configured.meetings) {
+    return configured;
   }
 
-  const markdown = readFileSync(MEMORY_PATH_MAP, 'utf8');
-  const readEntry = (englishLabel, chineseLabel) => {
-    const pattern = new RegExp(
-      `(?:${englishLabel}|${chineseLabel})\\s*[：:]\\s*\`([^\`]+)\``,
-      'i',
-    );
-    return markdown.match(pattern)?.[1]?.trim() || '';
-  };
-  const result = {
-    definition: readEntry('Persona definition', '人格定义'),
-    conversations: readEntry('Conversation records', '对话记录'),
-    meetings: readEntry('Meeting records', '会议记录'),
-  };
-
-  if (!result.definition || !result.conversations || !result.meetings) {
-    const error = new Error('memory_path.md 缺少人格定义、对话记录或会议记录路径');
-    error.statusCode = 500;
-    throw error;
-  }
-  return result;
+  const error = new Error(
+    '缺少 memoryPaths 配置；请在 persona_path.json 中配置人格、对话记录和会议记录路径',
+  );
+  error.statusCode = 503;
+  throw error;
 }
 
 function resolveMemoryPath(template, personaId) {
@@ -319,7 +316,7 @@ function resolveMemoryPath(template, personaId) {
     path.isAbsolute(template) ||
     template.split(/[\\/]/).includes('..')
   ) {
-    const error = new Error('memory_path.md 包含不安全路径');
+    const error = new Error('memoryPaths 包含不安全路径');
     error.statusCode = 500;
     throw error;
   }
@@ -358,7 +355,7 @@ function readPersonaDefinition(personaId) {
     !expectedPath ||
     path.resolve(definitionPath) !== path.resolve(expectedPath)
   ) {
-    const error = new Error('memory_path.md 的人格定义与角色清单不一致');
+    const error = new Error('memoryPaths 的人格定义与角色清单不一致');
     error.statusCode = 500;
     throw error;
   }
@@ -373,7 +370,7 @@ function savePersonaDefinition(personaId, content) {
     !expectedPath ||
     path.resolve(definitionPath) !== path.resolve(expectedPath)
   ) {
-    const error = new Error('memory_path.md 的人格定义与角色清单不一致');
+    const error = new Error('memoryPaths 的人格定义与角色清单不一致');
     error.statusCode = 500;
     throw error;
   }
@@ -611,19 +608,33 @@ function publicMessages(transcript, persona) {
 
 function claudeExecutable() {
   if (process.env.CLAUDE_EXECUTABLE) return process.env.CLAUDE_EXECUTABLE;
+  if (claudeConfig.executable) return String(claudeConfig.executable);
   if (process.platform === 'win32' && process.env.APPDATA) {
-    const executable = path.join(
-      process.env.APPDATA,
-      'npm',
-      'node_modules',
-      '@anthropic-ai',
-      'claude-code',
-      'bin',
-      'claude.exe',
-    );
-    if (existsSync(executable)) return executable;
+    const npmBin = path.join(process.env.APPDATA, 'npm');
+    const candidates = [
+      path.join(
+        npmBin,
+        'node_modules',
+        '@anthropic-ai',
+        'claude-code',
+        'bin',
+        'claude.exe',
+      ),
+      path.join(npmBin, 'claude.exe'),
+      path.join(npmBin, 'claude.cmd'),
+    ];
+    const executable = candidates.find((candidate) => existsSync(candidate));
+    if (executable) return executable;
   }
   return 'claude';
+}
+
+function claudeRuntimeEnv() {
+  return {
+    ...process.env,
+    ...configuredClaudeEnv,
+    CLAUDE_AGENT_SDK_CLIENT_APP: 'ship-of-theseus',
+  };
 }
 
 function sseWrite(res, event, data) {
@@ -882,10 +893,11 @@ async function callClaude({
   const hasExistingConversation = transcript.messages.some(
     (item) => item.sender === 'ai',
   );
+  const runtimeEnv = claudeRuntimeEnv();
   const effort = ['low', 'medium', 'high', 'max'].includes(
-    process.env.CLAUDE_CODE_EFFORT_LEVEL,
+    runtimeEnv.CLAUDE_CODE_EFFORT_LEVEL,
   )
-    ? process.env.CLAUDE_CODE_EFFORT_LEVEL
+    ? runtimeEnv.CLAUDE_CODE_EFFORT_LEVEL
     : 'max';
 
   try {
@@ -895,10 +907,7 @@ async function callClaude({
         abortController,
         cwd: PERSONA_HOME,
         pathToClaudeCodeExecutable: claudeExecutable(),
-        env: {
-          ...process.env,
-          CLAUDE_AGENT_SDK_CLIENT_APP: 'ship-of-theseus',
-        },
+        env: runtimeEnv,
         systemPrompt: { type: 'preset', preset: 'claude_code' },
         settingSources: ['project'],
         tools: [
@@ -1088,7 +1097,8 @@ async function handleRequest(req, res) {
       claudeExecutableAvailable:
         claudeExecutable() === 'claude' || existsSync(claudeExecutable()),
       providerConfigured: Boolean(
-        process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY,
+        claudeRuntimeEnv().ANTHROPIC_AUTH_TOKEN ||
+        claudeRuntimeEnv().ANTHROPIC_API_KEY,
       ),
     });
     return;
@@ -1490,9 +1500,6 @@ async function handleRequest(req, res) {
 
   // ---- 引擎室统计端点 ----
   if (req.method === 'GET' && url.pathname === '/api/engine-room/stats') {
-    const CLAUDE_JSON = 'C:\\Users\\86198\\.claude.json';
-    const PROJECTS_DIR = 'C:\\Users\\86198\\.claude\\projects';
-
     let startups = 0;
     const projectSessions = {};
     const projectMessages = {};
@@ -1500,18 +1507,19 @@ async function handleRequest(req, res) {
 
     // 1. numStartups
     try {
-      if (existsSync(CLAUDE_JSON)) {
-        startups = JSON.parse(readFileSync(CLAUDE_JSON, 'utf8')).numStartups || 0;
+      if (existsSync(ENGINE_CLAUDE_JSON)) {
+        const claudeSettings = JSON.parse(readFileSync(ENGINE_CLAUDE_JSON, 'utf8'));
+        startups = claudeSettings[ENGINE_NUM_STARTUPS_FIELD] || 0;
       }
     } catch { /* ignore */ }
 
     // 2. 每个项目的会话数量
     try {
-      if (existsSync(PROJECTS_DIR)) {
-        for (const entry of readdirSync(PROJECTS_DIR, { withFileTypes: true })) {
+      if (existsSync(ENGINE_PROJECTS_DIR)) {
+        for (const entry of readdirSync(ENGINE_PROJECTS_DIR, { withFileTypes: true })) {
           if (!entry.isDirectory()) continue;
           const slug = entry.name;
-          const dir = path.join(PROJECTS_DIR, slug);
+          const dir = path.join(ENGINE_PROJECTS_DIR, slug);
           try {
             projectSessions[slug] = readdirSync(dir).filter(f => f.endsWith('.jsonl')).length;
           } catch { projectSessions[slug] = 0; }
@@ -1524,7 +1532,7 @@ async function handleRequest(req, res) {
     const tmpPy = path.join(os.tmpdir(), `theseus_engine_${process.pid}.py`);
     writeFileSync(tmpPy, [
       'import json, os, glob, ast',
-      `dirpath = ${JSON.stringify(PROJECTS_DIR)}`,
+      `dirpath = ${JSON.stringify(ENGINE_PROJECTS_DIR)}`,
       'total = 0',
       'by_project = {}',
       'if os.path.isdir(dirpath):',
@@ -1568,11 +1576,11 @@ async function handleRequest(req, res) {
     // Python 不可用时回退到 Node.js 暴力解析
     if (totalUserMessages === 0) {
       try {
-        if (existsSync(PROJECTS_DIR)) {
-          for (const entry of readdirSync(PROJECTS_DIR, { withFileTypes: true })) {
+        if (existsSync(ENGINE_PROJECTS_DIR)) {
+          for (const entry of readdirSync(ENGINE_PROJECTS_DIR, { withFileTypes: true })) {
             if (!entry.isDirectory()) continue;
             const slug = entry.name;
-            const dir = path.join(PROJECTS_DIR, slug);
+            const dir = path.join(ENGINE_PROJECTS_DIR, slug);
             let count = 0;
             try {
               for (const f of readdirSync(dir)) {
@@ -1620,7 +1628,8 @@ const server = http.createServer((req, res) => {
 
 function printStartupSummary(prefix) {
   const providerConfigured = Boolean(
-    process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY,
+    claudeRuntimeEnv().ANTHROPIC_AUTH_TOKEN ||
+    claudeRuntimeEnv().ANTHROPIC_API_KEY,
   );
   console.log(`\n⚓ ${prefix}`);
   console.log(`   Persona workspace: ${PERSONA_HOME || 'NOT CONFIGURED'}`);

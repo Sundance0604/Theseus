@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as PIXI from 'pixi.js';
+import { assetUrl } from '../../config/assets';
 
 /* ==========================================================================
    ShipCanvas — 全屏红底 + 旋转方形背景 + 居中虚空舰
@@ -26,8 +27,8 @@ export const ShipCanvas = ({ phase, onShipReady }) => {
       // 1. 加载纹理
       // ================================================================
       const [bgTex, shipTex] = await Promise.all([
-        PIXI.Assets.load('/background.png'),
-        PIXI.Assets.load('/ship.png'),
+        PIXI.Assets.load(assetUrl('background.png')),
+        PIXI.Assets.load(assetUrl('ship.png')),
       ]);
 
       // ================================================================
