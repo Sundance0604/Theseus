@@ -918,9 +918,11 @@ async function callClaude({
           'Grep',
           'Bash',
           'AskUserQuestion',
+          'WebFetch',
+          'WebSearch'
         ],
-        allowedTools: ['Read', 'Glob', 'Grep'],
-        disallowedTools: ['WebFetch', 'WebSearch'],
+        allowedTools: ['Read', 'Glob', 'Grep','WebFetch', 'WebSearch', 'Write', 'Edit', 'Bash', 'AskUserQuestion'],
+        //disallowedTools: ['WebFetch', 'WebSearch'],
         permissionMode: 'acceptEdits',
         includePartialMessages: true,
         effort,
