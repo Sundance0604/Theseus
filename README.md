@@ -221,6 +221,60 @@ accepts an optional `briefingTemplate` field. The facilitator persona (not
 hard-coded to Lin) reads this template and fills in the dynamic system state
 (archive count, git status, etc.).
 
+### 8. Web Search Unavailable in Packaged Electron
+**Problem:** In the packaged `.exe`, the bridge server's Claude Code child
+process runs inside Electron's `sandbox: true` + `contextIsolation: true`
+environment. The `WebFetch` and `WebSearch` tools were originally
+`disallowedTools`. Even when enabled in `allowedTools`, the Electron sandbox
+prevents the Node child process from making arbitrary outbound HTTP requests
+to non-API endpoints (Google/Bing search result pages). In web dev mode
+(`npm run dev`), this works because the bridge runs as a standalone Node
+process with full network access.
+
+**Fix:** Add a dedicated proxy endpoint `POST /web-search` in the bridge
+server. The frontend calls this endpoint instead of letting Claude Code
+directly invoke `WebSearch`. The bridge server uses a server-side HTTP client
+(no sandbox restrictions) to fetch search results, sanitizes them, and returns
+them to Claude Code as tool output. This keeps persona context off the public
+web while restoring search functionality in Electron builds.
+
+### 9. server.js Monolith Needs Refactoring
+**Problem:** `bridge-server/server.js` has grown to **1538 lines** containing
+49 top-level functions interleaved with route handlers, persona parsing,
+transcript I/O, seminar management, interaction polling, Claude Code SDK
+integration, file serving, and SSE streaming — all in a single file. There is
+no separation between the HTTP layer, business logic, and data access. Adding
+a new feature requires navigating the entire file.
+
+**Fix — Proposed Module Split:**
+
+```
+bridge-server/
+├── server.js                 # ~150 lines: HTTP server + route dispatch only
+├── routes/
+│   ├── chat.js               # POST /chat, SSE streaming, interaction hooks
+│   ├── personas.js           # GET /personas, /persona-asset, /persona-half
+│   ├── history.js            # GET|DELETE /history, transcript I/O
+│   ├── seminar.js            # /seminar/*, multi-agent orchestration
+│   ├── archive.js            # /archive/*, /memory/*, markdown file serving
+│   ├── profile.js            # GET /profile, /user-avatar, /user-half
+│   └── web-search.js         # POST /web-search (new — see issue 8)
+├── lib/
+│   ├── config.js             # localConfig, PERSONA_HOME, DATA_DIR, paths
+│   ├── personas.js           # readPersona, readAllPersonas, publicPersona
+│   ├── transcripts.js        # load/saveTranscript, transcriptPath
+│   ├── seminars.js           # create/load/saveSeminar, seminarPath
+│   ├── archives.js           # archiveFiles, archiveFileId, markdown helpers
+│   ├── sse.js                # sseWrite, stream helpers
+│   └── claude.js             # claudeExecutable, runtimeEnv, query wrapper
+└── middleware/
+    └── cors.js               # CORS + loopback-only guard
+```
+
+Each route module exports a `(req, res) => Promise<void>` handler. `server.js`
+acts as a thin dispatcher: parse URL → delegate to route module. This removes
+~1100 lines from the entry point and makes each concern independently testable.
+
 ## Documentation
 
 - [Persona setup template](doc/PERSONA_SETUP.template.md)
